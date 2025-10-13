@@ -9,8 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Save, Plus, X, Upload } from "lucide-react";
+import { ArrowLeft, Save, Plus, X, Upload, ExternalLink, Copy } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
 
 interface KeyringVariant {
   id?: string;
@@ -38,7 +39,7 @@ const CampaignBuilder = () => {
   const [loading, setLoading] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  const campaignUrl = `${window.location.origin}/order/${uniqueCode}`;
+  const campaignUrl = `${getPublicBaseUrl()}/order/${uniqueCode}`;
 
   useEffect(() => {
     if (id) {
@@ -434,30 +435,62 @@ const CampaignBuilder = () => {
               <CardDescription>Download and include in your mailshot</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
+              {status !== "active" && (
+                <div className="w-full p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-md mb-2">
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                    ⚠️ Set status to "Active" to make this link publicly accessible
+                  </p>
+                </div>
+              )}
               <QRCodeSVG id="campaign-qr-code" value={campaignUrl} size={200} />
-              <Button
-                onClick={() => {
-                  const svg = document.getElementById("campaign-qr-code");
-                  if (!svg) return;
-                  const svgData = new XMLSerializer().serializeToString(svg);
-                  const canvas = document.createElement("canvas");
-                  const ctx = canvas.getContext("2d");
-                  const img = new Image();
-                  img.onload = () => {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx?.drawImage(img, 0, 0);
-                    const pngFile = canvas.toDataURL("image/png");
-                    const downloadLink = document.createElement("a");
-                    downloadLink.download = `${uniqueCode}-qr.png`;
-                    downloadLink.href = pngFile;
-                    downloadLink.click();
-                  };
-                  img.src = "data:image/svg+xml;base64," + btoa(svgData);
-                }}
-              >
-                Download QR Code
-              </Button>
+              <div className="p-3 bg-muted rounded-md w-full text-center">
+                <p className="text-sm font-mono break-all">{campaignUrl}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    navigator.clipboard.writeText(campaignUrl);
+                    toast({
+                      title: "Link copied",
+                      description: "Campaign link copied to clipboard",
+                    });
+                  }}
+                >
+                  <Copy className="h-4 w-4 mr-2" />
+                  Copy Link
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(campaignUrl, "_blank")}
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Open in New Tab
+                </Button>
+                <Button
+                  onClick={() => {
+                    const svg = document.getElementById("campaign-qr-code");
+                    if (!svg) return;
+                    const svgData = new XMLSerializer().serializeToString(svg);
+                    const canvas = document.createElement("canvas");
+                    const ctx = canvas.getContext("2d");
+                    const img = new Image();
+                    img.onload = () => {
+                      canvas.width = img.width;
+                      canvas.height = img.height;
+                      ctx?.drawImage(img, 0, 0);
+                      const pngFile = canvas.toDataURL("image/png");
+                      const downloadLink = document.createElement("a");
+                      downloadLink.download = `${uniqueCode}-qr.png`;
+                      downloadLink.href = pngFile;
+                      downloadLink.click();
+                    };
+                    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                  }}
+                >
+                  Download QR Code
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

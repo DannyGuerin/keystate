@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft, Copy } from "lucide-react";
+import { getPublicBaseUrl } from "@/lib/publicUrl";
 
 interface Campaign {
   id: string;
@@ -54,7 +55,7 @@ const AdminCampaigns = () => {
   };
 
   const copyLink = (code: string) => {
-    const url = `${window.location.origin}/order/${code}`;
+    const url = `${getPublicBaseUrl()}/order/${code}`;
     navigator.clipboard.writeText(url);
     toast({
       title: "Link copied",
