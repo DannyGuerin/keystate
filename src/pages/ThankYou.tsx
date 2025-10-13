@@ -1,38 +1,44 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Package, Mail, Key } from "lucide-react";
+import { CheckCircle2, Package, Mail, Key, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const ThankYou = () => {
   const navigate = useNavigate();
+  const orderNumber = "KS-" + Math.random().toString(36).substr(2, 9).toUpperCase();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary">
       {/* Header */}
-      <header className="border-b border-border/40 backdrop-blur-sm bg-background/80">
-        <div className="container mx-auto px-4 py-4 flex items-center gap-2">
-          <Key className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            KEYSTATE
-          </h1>
+      <header className="border-b border-border backdrop-blur-sm bg-background/80">
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+            <Key className="h-5 w-5 text-primary-foreground" />
+          </div>
+          <h1 className="text-2xl font-heading font-bold text-foreground">KEYSTATE</h1>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-16 max-w-2xl">
-        <div className="text-center mb-12 animate-slide-up">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
-            <CheckCircle2 className="h-10 w-10 text-primary" />
+      <main className="container mx-auto px-4 sm:px-6 py-12 flex items-center justify-center min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-2xl">
+          <div className="text-center mb-8 animate-fade-in">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
+              <CheckCircle2 className="h-10 w-10 text-primary" />
+            </div>
+            <h1 className="text-4xl font-heading font-bold mb-3 text-foreground">
+              Order Confirmed!
+            </h1>
+            <p className="text-lg text-muted-foreground mb-4">
+              Thank you for your order
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-muted/30 border border-border">
+              <span className="text-sm text-muted-foreground">Order:</span>
+              <span className="font-heading font-semibold">{orderNumber}</span>
+            </div>
           </div>
-          <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-            Order Confirmed!
-          </h1>
-          <p className="text-xl text-muted-foreground">
-            Thank you for your order
-          </p>
-        </div>
 
-        <Card className="shadow-elegant border-border/50 backdrop-blur-sm bg-card/95 animate-fade-in mb-8">
+        <Card className="shadow-elegant rounded-2xl border-border/50 bg-card animate-scale-in mb-8">
           <CardContent className="pt-6 space-y-6">
             <div className="text-center pb-6 border-b border-border/50">
               <h2 className="text-2xl font-semibold mb-2">What happens next?</h2>
@@ -81,21 +87,22 @@ const ThankYou = () => {
           </CardContent>
         </Card>
 
-        <div className="text-center space-y-4">
-          <Button
-            onClick={() => navigate("/")}
-            variant="outline"
-            size="lg"
-            className="min-w-[200px]"
-          >
-            Place Another Order
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            Need help? Contact us at{" "}
-            <a href="mailto:hello@keystate.com" className="text-primary hover:underline">
-              hello@keystate.com
-            </a>
-          </p>
+          <div className="text-center space-y-4">
+            <Button
+              onClick={() => navigate("/")}
+              variant="outline"
+              size="lg"
+              className="min-w-[200px] rounded-xl"
+            >
+              Place Another Order
+            </Button>
+            <p className="text-sm text-muted-foreground">
+              Need help? Contact us at{" "}
+              <a href="mailto:hello@keystate.com" className="text-primary hover:underline">
+                hello@keystate.com
+              </a>
+            </p>
+          </div>
         </div>
       </main>
     </div>

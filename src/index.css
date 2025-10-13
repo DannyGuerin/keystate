@@ -8,75 +8,98 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%;
+    /* KEYSTATE Brand Colors */
+    --background: 215 37% 97%; /* #F7F9FB */
+    --foreground: 205 24% 22%; /* #303841 */
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 205 24% 22%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
+    --popover-foreground: 205 24% 22%;
 
-    --primary: 239 84% 67%;
+    /* Primary/Accent - KEYSTATE Orange */
+    --primary: 14 100% 57%; /* #FF5722 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 14% 96%;
-    --secondary-foreground: 222 47% 11%;
+    --secondary: 215 37% 97%; /* Light background */
+    --secondary-foreground: 205 24% 22%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 9% 46%; /* #6B7280 */
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 239 84% 67%;
+    /* Accent is the same as primary for KEYSTATE */
+    --accent: 14 100% 57%; /* #FF5722 */
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
+    /* Semantic colors */
+    --destructive: 0 71% 51%; /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 13% 91%;
-    --input: 220 13% 91%;
-    --ring: 239 84% 67%;
+    --success: 142 71% 45%; /* #16A34A */
+    --warning: 38 92% 50%; /* #F59E0B */
 
-    --radius: 0.75rem;
+    --border: 216 20% 92%; /* #E6EAF0 */
+    --input: 216 20% 92%;
+    --ring: 14 100% 57%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(262 83% 58%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(220 14% 98%));
-    --shadow-elegant: 0 10px 40px -10px hsl(239 84% 67% / 0.15);
-    --shadow-glow: 0 0 60px hsl(239 84% 67% / 0.2);
+    --radius: 1rem; /* rounded-2xl for cards */
+
+    /* KEYSTATE specific tokens */
+    --ks-accent: 14 100% 57%; /* #FF5722 */
+    --ks-accent-hover: 14 88% 50%; /* #E04E1F */
+    --ks-success: 142 71% 45%;
+    --ks-warning: 38 92% 50%;
+    --ks-danger: 0 71% 51%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(14 100% 57%), hsl(14 88% 50%));
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(215 37% 97%));
+    --shadow-elegant: 0 10px 40px -10px hsl(14 100% 57% / 0.12);
+    --shadow-glow: 0 0 60px hsl(14 100% 57% / 0.15);
   }
 
   .dark {
-    --background: 222 47% 11%;
+    --background: 210 40% 5%; /* #0B0E12 */
     --foreground: 210 40% 98%;
 
-    --card: 224 71% 4%;
+    --card: 213 36% 11%; /* #11161C */
     --card-foreground: 210 40% 98%;
 
-    --popover: 224 71% 4%;
+    --popover: 213 36% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 239 84% 67%;
+    --primary: 14 100% 57%; /* #FF5722 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 217 33% 17%;
+    --secondary: 210 28% 15%; /* #1E2630 */
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217 33% 17%;
-    --muted-foreground: 215 20% 65%;
+    --muted: 220 9% 46%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 239 84% 67%;
+    --accent: 14 100% 57%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 0 71% 51%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 217 33% 17%;
-    --input: 217 33% 17%;
-    --ring: 239 84% 67%;
+    --success: 142 71% 45%;
+    --warning: 38 92% 50%;
 
-    --gradient-primary: linear-gradient(135deg, hsl(239 84% 67%), hsl(262 83% 58%));
-    --gradient-subtle: linear-gradient(180deg, hsl(222 47% 11%), hsl(224 71% 4%));
-    --shadow-elegant: 0 10px 40px -10px hsl(239 84% 67% / 0.3);
-    --shadow-glow: 0 0 60px hsl(239 84% 67% / 0.4);
+    --border: 210 28% 15%; /* #1E2630 */
+    --input: 210 28% 15%;
+    --ring: 14 100% 57%;
+
+    --ks-accent: 14 100% 57%;
+    --ks-accent-hover: 14 88% 50%;
+    --ks-success: 142 71% 45%;
+    --ks-warning: 38 92% 50%;
+    --ks-danger: 0 71% 51%;
+
+    --gradient-primary: linear-gradient(135deg, hsl(14 100% 57%), hsl(14 88% 50%));
+    --gradient-subtle: linear-gradient(180deg, hsl(210 40% 5%), hsl(213 36% 11%));
+    --shadow-elegant: 0 10px 40px -10px hsl(14 100% 57% / 0.2);
+    --shadow-glow: 0 0 60px hsl(14 100% 57% / 0.25);
   }
 }
 

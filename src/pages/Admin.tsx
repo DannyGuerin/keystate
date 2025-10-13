@@ -51,15 +51,15 @@ const Admin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
-      <header className="border-b border-border/40 backdrop-blur-sm bg-background/80">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <Key className="h-6 w-6 text-primary" />
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              KEYSTATE
-            </h1>
+      <header className="border-b border-border backdrop-blur-sm bg-background/80">
+        <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
+              <Key className="h-5 w-5 text-primary-foreground" />
+            </div>
+            <h1 className="text-2xl font-heading font-bold text-foreground">KEYSTATE</h1>
           </div>
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button variant="outline" onClick={() => navigate("/")} className="rounded-xl">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Orders
           </Button>
@@ -69,7 +69,7 @@ const Admin = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         <div className="mb-8 animate-slide-up">
-          <h2 className="text-4xl font-bold mb-3 bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+          <h2 className="text-4xl font-heading font-bold mb-3 text-foreground">
             Admin Dashboard
           </h2>
           <p className="text-muted-foreground text-lg">
