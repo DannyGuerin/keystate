@@ -8,10 +8,11 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Package, CreditCard, CheckCircle2, Key } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-
 const Index = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const {
+    toast
+  } = useToast();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -22,18 +23,17 @@ const Index = () => {
     quantity: "",
     customQuantity: "",
     paymentMode: "one-off",
-    promoCode: "",
+    promoCode: ""
   });
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!formData.name || !formData.email || !formData.company || !formData.keyringType || !formData.quantity) {
       toast({
         title: "Missing Information",
         description: "Please fill in all required fields",
-        variant: "destructive",
+        variant: "destructive"
       });
       return;
     }
@@ -41,16 +41,13 @@ const Index = () => {
     // For now, simulate success and navigate to thank you page
     toast({
       title: "Order Submitted!",
-      description: "Redirecting to payment...",
+      description: "Redirecting to payment..."
     });
-    
     setTimeout(() => {
       navigate("/thank-you");
     }, 1500);
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       {/* Header */}
       <header className="border-b border-border/40 backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -97,44 +94,31 @@ const Index = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      placeholder="John Smith"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      required
-                    />
+                    <Input id="name" placeholder="John Smith" value={formData.name} onChange={e => setFormData({
+                    ...formData,
+                    name: e.target.value
+                  })} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="email">Email *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="john@agency.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      required
-                    />
+                    <Input id="email" type="email" placeholder="john@agency.com" value={formData.email} onChange={e => setFormData({
+                    ...formData,
+                    email: e.target.value
+                  })} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="company">Company *</Label>
-                    <Input
-                      id="company"
-                      placeholder="Premier Estate Agents"
-                      value={formData.company}
-                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                      required
-                    />
+                    <Input id="company" placeholder="Premier Estate Agents" value={formData.company} onChange={e => setFormData({
+                    ...formData,
+                    company: e.target.value
+                  })} required />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+44 7700 900000"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
+                    <Input id="phone" type="tel" placeholder="+44 7700 900000" value={formData.phone} onChange={e => setFormData({
+                    ...formData,
+                    phone: e.target.value
+                  })} />
                   </div>
                 </div>
               </div>
@@ -147,10 +131,10 @@ const Index = () => {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="keyringType">Keyring Type *</Label>
-                    <Select
-                      value={formData.keyringType}
-                      onValueChange={(value) => setFormData({ ...formData, keyringType: value })}
-                    >
+                    <Select value={formData.keyringType} onValueChange={value => setFormData({
+                    ...formData,
+                    keyringType: value
+                  })}>
                       <SelectTrigger id="keyringType">
                         <SelectValue placeholder="Select keyring type" />
                       </SelectTrigger>
@@ -165,11 +149,11 @@ const Index = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="color">Color</Label>
-                    <Select
-                      value={formData.color}
-                      onValueChange={(value) => setFormData({ ...formData, color: value })}
-                    >
+                    <Label htmlFor="color">Colour</Label>
+                    <Select value={formData.color} onValueChange={value => setFormData({
+                    ...formData,
+                    color: value
+                  })}>
                       <SelectTrigger id="color">
                         <SelectValue placeholder="Select color" />
                       </SelectTrigger>
@@ -185,10 +169,10 @@ const Index = () => {
 
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity *</Label>
-                    <Select
-                      value={formData.quantity}
-                      onValueChange={(value) => setFormData({ ...formData, quantity: value })}
-                    >
+                    <Select value={formData.quantity} onValueChange={value => setFormData({
+                    ...formData,
+                    quantity: value
+                  })}>
                       <SelectTrigger id="quantity">
                         <SelectValue placeholder="Select quantity" />
                       </SelectTrigger>
@@ -202,19 +186,13 @@ const Index = () => {
                     </Select>
                   </div>
 
-                  {formData.quantity === "custom" && (
-                    <div className="space-y-2 animate-fade-in">
+                  {formData.quantity === "custom" && <div className="space-y-2 animate-fade-in">
                       <Label htmlFor="customQuantity">Custom Quantity</Label>
-                      <Input
-                        id="customQuantity"
-                        type="number"
-                        min="1"
-                        placeholder="Enter quantity"
-                        value={formData.customQuantity}
-                        onChange={(e) => setFormData({ ...formData, customQuantity: e.target.value })}
-                      />
-                    </div>
-                  )}
+                      <Input id="customQuantity" type="number" min="1" placeholder="Enter quantity" value={formData.customQuantity} onChange={e => setFormData({
+                    ...formData,
+                    customQuantity: e.target.value
+                  })} />
+                    </div>}
                 </div>
               </div>
 
@@ -223,11 +201,10 @@ const Index = () => {
                 <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wider">
                   Payment Options
                 </h3>
-                <RadioGroup
-                  value={formData.paymentMode}
-                  onValueChange={(value) => setFormData({ ...formData, paymentMode: value })}
-                  className="space-y-3"
-                >
+                <RadioGroup value={formData.paymentMode} onValueChange={value => setFormData({
+                ...formData,
+                paymentMode: value
+              })} className="space-y-3">
                   <div className="flex items-center space-x-3 border border-border rounded-lg p-4 hover:border-primary/50 transition-colors cursor-pointer">
                     <RadioGroupItem value="one-off" id="one-off" />
                     <Label htmlFor="one-off" className="flex-1 cursor-pointer">
@@ -248,20 +225,14 @@ const Index = () => {
               {/* Promo Code */}
               <div className="space-y-2">
                 <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-                <Input
-                  id="promoCode"
-                  placeholder="Enter promo code"
-                  value={formData.promoCode}
-                  onChange={(e) => setFormData({ ...formData, promoCode: e.target.value })}
-                />
+                <Input id="promoCode" placeholder="Enter promo code" value={formData.promoCode} onChange={e => setFormData({
+                ...formData,
+                promoCode: e.target.value
+              })} />
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full h-12 text-base font-medium shadow-glow hover:shadow-lg transition-all"
-                size="lg"
-              >
+              <Button type="submit" className="w-full h-12 text-base font-medium shadow-glow hover:shadow-lg transition-all" size="lg">
                 <CreditCard className="mr-2 h-5 w-5" />
                 Continue to Payment
               </Button>
@@ -281,8 +252,6 @@ const Index = () => {
           </div>
         </div>
       </main>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
