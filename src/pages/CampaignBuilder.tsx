@@ -434,10 +434,10 @@ const CampaignBuilder = () => {
               <CardDescription>Download and include in your mailshot</CardDescription>
             </CardHeader>
             <CardContent className="flex flex-col items-center gap-4">
-              <QRCodeSVG value={campaignUrl} size={200} />
+              <QRCodeSVG id="campaign-qr-code" value={campaignUrl} size={200} />
               <Button
                 onClick={() => {
-                  const svg = document.querySelector("svg");
+                  const svg = document.getElementById("campaign-qr-code");
                   if (!svg) return;
                   const svgData = new XMLSerializer().serializeToString(svg);
                   const canvas = document.createElement("canvas");
