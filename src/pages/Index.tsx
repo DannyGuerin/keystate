@@ -118,7 +118,7 @@ const Index = () => {
       <header className="border-b border-border backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-8 w-auto" />
+            <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-12 w-auto" />
           </div>
           <Button variant="outline" onClick={() => navigate("/admin")} className="rounded-xl">
             Admin
