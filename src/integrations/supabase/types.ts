@@ -224,6 +224,8 @@ export type Database = {
         | "processing"
         | "shipped"
         | "delivered"
+        | "pending_payment"
+        | "paid"
       payment_mode: "one-off" | "subscription"
     }
     CompositeTypes: {
@@ -360,6 +362,8 @@ export const Constants = {
         "processing",
         "shipped",
         "delivered",
+        "pending_payment",
+        "paid",
       ],
       payment_mode: ["one-off", "subscription"],
     },

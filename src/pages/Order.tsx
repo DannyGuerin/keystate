@@ -100,7 +100,7 @@ const Order = () => {
     // Create draft order
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
-      .insert({
+      .insert([{
         campaign_id: campaign.id,
         keyring_variant_id: selectedVariant,
         customer_name: name,
@@ -109,8 +109,8 @@ const Order = () => {
         quantity: parseInt(quantity),
         payment_mode: paymentMode,
         promo_code: promoCode || null,
-        status: "pending_payment",
-      })
+        status: "pending_payment" as const,
+      }])
       .select()
       .single();
 
