@@ -14,16 +14,193 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      campaigns: {
+        Row: {
+          company_address: string | null
+          company_name: string
+          company_postcode: string | null
+          contact_person: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          status: Database["public"]["Enums"]["campaign_status"]
+          unique_code: string
+        }
+        Insert: {
+          company_address?: string | null
+          company_name: string
+          company_postcode?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          unique_code: string
+        }
+        Update: {
+          company_address?: string | null
+          company_name?: string
+          company_postcode?: string | null
+          contact_person?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          status?: Database["public"]["Enums"]["campaign_status"]
+          unique_code?: string
+        }
+        Relationships: []
+      }
+      keyring_variants: {
+        Row: {
+          campaign_id: string
+          color: string
+          created_at: string
+          id: string
+          image_url: string | null
+          is_available: boolean
+          sort_order: number
+          type: string
+        }
+        Insert: {
+          campaign_id: string
+          color: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          sort_order?: number
+          type: string
+        }
+        Update: {
+          campaign_id?: string
+          color?: string
+          created_at?: string
+          id?: string
+          image_url?: string | null
+          is_available?: boolean
+          sort_order?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "keyring_variants_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          campaign_id: string
+          customer_email: string
+          customer_name: string
+          customer_phone: string | null
+          id: string
+          keyring_variant_id: string | null
+          notes: string | null
+          order_date: string
+          payment_mode: Database["public"]["Enums"]["payment_mode"]
+          promo_code: string | null
+          quantity: number
+          status: Database["public"]["Enums"]["order_status"]
+          total_amount: number | null
+        }
+        Insert: {
+          campaign_id: string
+          customer_email: string
+          customer_name: string
+          customer_phone?: string | null
+          id?: string
+          keyring_variant_id?: string | null
+          notes?: string | null
+          order_date?: string
+          payment_mode: Database["public"]["Enums"]["payment_mode"]
+          promo_code?: string | null
+          quantity: number
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount?: number | null
+        }
+        Update: {
+          campaign_id?: string
+          customer_email?: string
+          customer_name?: string
+          customer_phone?: string | null
+          id?: string
+          keyring_variant_id?: string | null
+          notes?: string | null
+          order_date?: string
+          payment_mode?: Database["public"]["Enums"]["payment_mode"]
+          promo_code?: string | null
+          quantity?: number
+          status?: Database["public"]["Enums"]["order_status"]
+          total_amount?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_keyring_variant_id_fkey"
+            columns: ["keyring_variant_id"]
+            isOneToOne: false
+            referencedRelation: "keyring_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
+      campaign_status: "draft" | "active" | "paused" | "completed"
+      order_status:
+        | "pending"
+        | "confirmed"
+        | "processing"
+        | "shipped"
+        | "delivered"
+      payment_mode: "one-off" | "subscription"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +327,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+      campaign_status: ["draft", "active", "paused", "completed"],
+      order_status: [
+        "pending",
+        "confirmed",
+        "processing",
+        "shipped",
+        "delivered",
+      ],
+      payment_mode: ["one-off", "subscription"],
+    },
   },
 } as const

@@ -1,125 +1,155 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { Package, ShoppingCart, DollarSign } from "lucide-react";
 import keystateLogoImage from "@/assets/keystate-logo.png";
 
-// Mock data for demonstration
-const mockOrders = [
-  {
-    id: "ORD-001",
-    name: "John Smith",
-    email: "john@agency.com",
-    company: "Premier Estates",
-    keyringType: "Classic Round",
-    quantity: 50,
-    paymentMode: "subscription",
-    status: "completed",
-    date: "2025-10-10",
-    amount: "£125.00"
-  },
-  {
-    id: "ORD-002",
-    name: "Sarah Johnson",
-    email: "sarah@homesfirst.co.uk",
-    company: "Homes First",
-    keyringType: "Premium Square",
-    quantity: 100,
-    paymentMode: "one-off",
-    status: "completed",
-    date: "2025-10-11",
-    amount: "£240.00"
-  },
-  {
-    id: "ORD-003",
-    name: "Mike Wilson",
-    email: "mike@propsolutions.com",
-    company: "Property Solutions",
-    keyringType: "Luxury House Shape",
-    quantity: 25,
-    paymentMode: "subscription",
-    status: "pending",
-    date: "2025-10-12",
-    amount: "£85.00"
-  },
-];
+interface Order {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  quantity: number;
+  payment_mode: string;
+  status: string;
+  order_date: string;
+  total_amount: number | null;
+  campaigns: {
+    company_name: string;
+  };
+  keyring_variants: {
+    type: string;
+    color: string;
+  } | null;
+}
 
 const Admin = () => {
   const navigate = useNavigate();
+  const { loading: authLoading, signOut } = useAuth();
+  const { toast } = useToast();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [stats, setStats] = useState({
+    totalRevenue: 0,
+    totalOrders: 0,
+    totalUnits: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    const { data: ordersData, error } = await supabase
+      .from("orders")
+      .select(`
+        *,
+        campaigns (company_name),
+        keyring_variants (type, color)
+      `)
+      .order("order_date", { ascending: false })
+      .limit(10);
+
+    if (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch orders",
+        variant: "destructive",
+      });
+    } else {
+      setOrders(ordersData || []);
+      
+      const revenue = ordersData?.reduce((sum, order) => sum + (order.total_amount || 0), 0) || 0;
+      const units = ordersData?.reduce((sum, order) => sum + order.quantity, 0) || 0;
+      
+      setStats({
+        totalRevenue: revenue,
+        totalOrders: ordersData?.length || 0,
+        totalUnits: units,
+      });
+    }
+    setLoading(false);
+  };
+
+  if (authLoading || loading) {
+    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      {/* Header */}
-      <header className="border-b border-border backdrop-blur-sm bg-background/80">
-        <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+    <div className="min-h-screen bg-background">
+      <header className="border-b bg-card">
+        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-8 w-auto" />
+            <img src={keystateLogoImage} alt="KEYSTATE" className="h-8" />
+            <h1 className="text-2xl font-heading font-bold">Admin Dashboard</h1>
           </div>
-          <Button variant="outline" onClick={() => navigate("/")} className="rounded-xl">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Orders
-          </Button>
+          <div className="flex gap-3">
+            <Button onClick={() => navigate("/admin/campaigns")}>
+              Manage Campaigns
+            </Button>
+            <Button variant="outline" onClick={signOut}>
+              Logout
+            </Button>
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8 animate-slide-up">
-          <h2 className="text-4xl font-heading font-bold mb-3 text-foreground">
-            Admin Dashboard
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Manage and track all keyring orders
-          </p>
+      <main className="container mx-auto px-6 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">£{stats.totalRevenue.toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground">From all orders</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalOrders}</div>
+              <p className="text-xs text-muted-foreground">All time</p>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Units</CardTitle>
+              <Package className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalUnits}</div>
+              <p className="text-xs text-muted-foreground">Keyrings ordered</p>
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8 animate-fade-in">
-          <Card className="shadow-elegant border-border/50 backdrop-blur-sm bg-card/95">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">£450.00</CardTitle>
-              <CardDescription>Total Revenue</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="shadow-elegant border-border/50 backdrop-blur-sm bg-card/95">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">3</CardTitle>
-              <CardDescription>Total Orders</CardDescription>
-            </CardHeader>
-          </Card>
-          <Card className="shadow-elegant border-border/50 backdrop-blur-sm bg-card/95">
-            <CardHeader>
-              <CardTitle className="text-2xl font-bold">175</CardTitle>
-              <CardDescription>Total Units Ordered</CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Orders Table */}
-        <Card className="shadow-elegant border-border/50 backdrop-blur-sm bg-card/95 animate-fade-in">
+        <Card>
           <CardHeader>
-            <div className="flex justify-between items-center">
-              <div>
-                <CardTitle>Recent Orders</CardTitle>
-                <CardDescription>View and manage all submitted orders</CardDescription>
-              </div>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-            </div>
+            <CardTitle>Recent Orders</CardTitle>
+            <CardDescription>Latest keyring orders from estate agents</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border border-border/50 overflow-hidden">
+            {orders.length === 0 ? (
+              <p className="text-center text-muted-foreground py-8">No orders yet</p>
+            ) : (
               <Table>
                 <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead>Order ID</TableHead>
+                  <TableRow>
                     <TableHead>Customer</TableHead>
                     <TableHead>Company</TableHead>
-                    <TableHead>Keyring Type</TableHead>
+                    <TableHead>Keyring</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Payment</TableHead>
                     <TableHead>Status</TableHead>
@@ -128,43 +158,55 @@ const Admin = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {mockOrders.map((order) => (
-                    <TableRow key={order.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-mono text-sm">{order.id}</TableCell>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{order.name}</div>
-                          <div className="text-sm text-muted-foreground">{order.email}</div>
+                          <p className="font-medium">{order.customer_name}</p>
+                          <p className="text-xs text-muted-foreground">{order.customer_email}</p>
                         </div>
                       </TableCell>
-                      <TableCell>{order.company}</TableCell>
-                      <TableCell className="text-sm">{order.keyringType}</TableCell>
+                      <TableCell>{order.campaigns?.company_name}</TableCell>
+                      <TableCell>
+                        {order.keyring_variants ? (
+                          <div>
+                            <p className="text-sm">{order.keyring_variants.type}</p>
+                            <p className="text-xs text-muted-foreground">{order.keyring_variants.color}</p>
+                          </div>
+                        ) : (
+                          "-"
+                        )}
+                      </TableCell>
                       <TableCell>{order.quantity}</TableCell>
                       <TableCell>
-                        <Badge variant={order.paymentMode === "subscription" ? "default" : "secondary"}>
-                          {order.paymentMode === "subscription" ? "Subscription" : "One-off"}
+                        <Badge variant={order.payment_mode === "subscription" ? "default" : "secondary"}>
+                          {order.payment_mode}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={order.status === "completed" ? "default" : "outline"}>
+                        <Badge 
+                          variant={
+                            order.status === "delivered" ? "default" : 
+                            order.status === "processing" ? "secondary" : 
+                            "outline"
+                          }
+                        >
                           {order.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="font-semibold">{order.amount}</TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{order.date}</TableCell>
+                      <TableCell className="font-medium">
+                        {order.total_amount ? `£${order.total_amount.toFixed(2)}` : "-"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(order.order_date).toLocaleDateString()}
+                      </TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
-            </div>
+            )}
           </CardContent>
         </Card>
-
-        <div className="mt-6 p-4 rounded-lg bg-muted/50 border border-border/50">
-          <p className="text-sm text-muted-foreground">
-            <strong>Note:</strong> This is demo data. Once connected to a database, you'll see real order information here.
-          </p>
-        </div>
       </main>
     </div>
   );
