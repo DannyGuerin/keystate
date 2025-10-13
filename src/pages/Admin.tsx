@@ -2,8 +2,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Key, ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import keystateLogoImage from "@/assets/keystate-logo.png";
 
 // Mock data for demonstration
 const mockOrders = [
@@ -54,10 +55,7 @@ const Admin = () => {
       <header className="border-b border-border backdrop-blur-sm bg-background/80">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Key className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">KEYSTATE</h1>
+            <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-8 w-auto" />
           </div>
           <Button variant="outline" onClick={() => navigate("/")} className="rounded-xl">
             <ArrowLeft className="mr-2 h-4 w-4" />

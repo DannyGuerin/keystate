@@ -5,12 +5,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Key, CreditCard } from "lucide-react";
+import { CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
 import { KeyringTypeCard } from "@/components/KeyringTypeCard";
 import { cn } from "@/lib/utils";
+import keystateLogoImage from "@/assets/keystate-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -117,12 +118,7 @@ const Index = () => {
       <header className="border-b border-border backdrop-blur-sm bg-background/80 sticky top-0 z-50">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-              <Key className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <h1 className="text-2xl font-heading font-bold text-foreground">
-              KEYSTATE
-            </h1>
+            <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-8 w-auto" />
           </div>
           <Button variant="outline" onClick={() => navigate("/admin")} className="rounded-xl">
             Admin

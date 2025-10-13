@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { CheckCircle2, Package, Mail, Key, Clock } from "lucide-react";
+import { CheckCircle2, Package, Mail, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import keystateLogoImage from "@/assets/keystate-logo.png";
 
 const ThankYou = () => {
   const navigate = useNavigate();
@@ -12,10 +13,7 @@ const ThankYou = () => {
       {/* Header */}
       <header className="border-b border-border backdrop-blur-sm bg-background/80">
         <div className="container mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-            <Key className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <h1 className="text-2xl font-heading font-bold text-foreground">KEYSTATE</h1>
+          <img src={keystateLogoImage} alt="KEYSTATE Logo" className="h-8 w-auto" />
         </div>
       </header>
 
