@@ -97,34 +97,56 @@ const Order = () => {
 
     setSubmitting(true);
 
-    const { error } = await supabase.from("orders").insert({
-      campaign_id: campaign.id,
-      keyring_variant_id: selectedVariant,
-      customer_name: name,
-      customer_email: email,
-      customer_phone: phone || null,
-      quantity: parseInt(quantity),
-      payment_mode: paymentMode,
-      promo_code: promoCode || null,
-      status: "pending",
-    });
+    // Create draft order
+    const { data: orderData, error: orderError } = await supabase
+      .from("orders")
+      .insert({
+        campaign_id: campaign.id,
+        keyring_variant_id: selectedVariant,
+        customer_name: name,
+        customer_email: email,
+        customer_phone: phone || null,
+        quantity: parseInt(quantity),
+        payment_mode: paymentMode,
+        promo_code: promoCode || null,
+        status: "pending_payment",
+      })
+      .select()
+      .single();
 
-    if (error) {
+    if (orderError || !orderData) {
       toast({
-        title: "Order failed",
-        description: error.message,
+        title: "Order creation failed",
+        description: orderError?.message || "Unable to create order",
         variant: "destructive",
       });
       setSubmitting(false);
       return;
     }
 
-    toast({
-      title: "Order placed!",
-      description: "We'll be in touch shortly",
-    });
+    // Create Stripe checkout session
+    const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+      "create-checkout",
+      {
+        body: {
+          orderId: orderData.id,
+          paymentMode: paymentMode,
+        },
+      }
+    );
 
-    navigate("/thank-you");
+    if (checkoutError || !checkoutData?.url) {
+      toast({
+        title: "Checkout failed",
+        description: checkoutError?.message || "Unable to create checkout session",
+        variant: "destructive",
+      });
+      setSubmitting(false);
+      return;
+    }
+
+    // Redirect to Stripe Checkout
+    window.location.href = checkoutData.url;
   };
 
   if (loading) {
@@ -329,7 +351,14 @@ const Order = () => {
                     size="lg"
                     disabled={submitting}
                   >
-                    {submitting ? "Placing Order..." : "Place Order"}
+                    {submitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      "Proceed to Checkout"
+                    )}
                   </Button>
                 </CardContent>
               </Card>

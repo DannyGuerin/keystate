@@ -107,7 +107,15 @@ export type Database = {
           payment_mode: Database["public"]["Enums"]["payment_mode"]
           promo_code: string | null
           quantity: number
+          shipping_address_line1: string | null
+          shipping_address_line2: string | null
+          shipping_city: string | null
+          shipping_country: string | null
+          shipping_name: string | null
+          shipping_postal_code: string | null
           status: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent_id: string | null
+          stripe_session_id: string | null
           total_amount: number | null
         }
         Insert: {
@@ -122,7 +130,15 @@ export type Database = {
           payment_mode: Database["public"]["Enums"]["payment_mode"]
           promo_code?: string | null
           quantity: number
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_name?: string | null
+          shipping_postal_code?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
           total_amount?: number | null
         }
         Update: {
@@ -137,7 +153,15 @@ export type Database = {
           payment_mode?: Database["public"]["Enums"]["payment_mode"]
           promo_code?: string | null
           quantity?: number
+          shipping_address_line1?: string | null
+          shipping_address_line2?: string | null
+          shipping_city?: string | null
+          shipping_country?: string | null
+          shipping_name?: string | null
+          shipping_postal_code?: string | null
           status?: Database["public"]["Enums"]["order_status"]
+          stripe_payment_intent_id?: string | null
+          stripe_session_id?: string | null
           total_amount?: number | null
         }
         Relationships: [
