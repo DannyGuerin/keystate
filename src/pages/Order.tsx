@@ -6,11 +6,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { KeyringTypeCard } from "@/components/KeyringTypeCard";
 import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Loader2 } from "lucide-react";
+import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
 
 interface Campaign {
   id: string;
@@ -44,8 +47,8 @@ const Order = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState("100");
-  const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("one-off");
+  const [quantity, setQuantity] = useState(25);
+  const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
 
   useEffect(() => {
@@ -97,6 +100,18 @@ const Order = () => {
 
     setSubmitting(true);
 
+    // Get the appropriate Stripe Price ID
+    const pricingTier = getPricingTier(quantity, paymentMode);
+    if (!pricingTier) {
+      toast({
+        title: "Invalid selection",
+        description: "Please select a valid quantity",
+        variant: "destructive",
+      });
+      setSubmitting(false);
+      return;
+    }
+
     // Create draft order
     const { data: orderData, error: orderError } = await supabase
       .from("orders")
@@ -106,7 +121,7 @@ const Order = () => {
         customer_name: name,
         customer_email: email,
         customer_phone: phone || null,
-        quantity: parseInt(quantity),
+        quantity: quantity,
         payment_mode: paymentMode,
         promo_code: promoCode || null,
         status: "pending_payment" as const,
@@ -131,6 +146,7 @@ const Order = () => {
         body: {
           orderId: orderData.id,
           paymentMode: paymentMode,
+          priceId: pricingTier.priceId,
         },
       }
     );
@@ -254,36 +270,126 @@ const Order = () => {
                 <CardContent className="pt-6 space-y-6">
                   <h3 className="text-lg font-heading font-semibold">Order Details</h3>
                   
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="quantity">Quantity</Label>
-                      <Select value={quantity} onValueChange={setQuantity}>
-                        <SelectTrigger id="quantity">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="50">50 keyrings</SelectItem>
-                          <SelectItem value="100">100 keyrings</SelectItem>
-                          <SelectItem value="250">250 keyrings</SelectItem>
-                          <SelectItem value="500">500 keyrings</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="paymentMode">Payment Mode</Label>
-                      <Select value={paymentMode} onValueChange={(v: any) => setPaymentMode(v)}>
-                        <SelectTrigger id="paymentMode">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="one-off">One-off Payment</SelectItem>
-                          <SelectItem value="subscription">Monthly Subscription</SelectItem>
-                        </SelectContent>
-                      </Select>
+                  {/* Payment Mode Toggle */}
+                  <div className="space-y-2">
+                    <Label>Payment Type</Label>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={paymentMode === "subscription" ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setPaymentMode("subscription")}
+                      >
+                        Monthly Subscription
+                        {paymentMode === "subscription" && (
+                          <Badge className="ml-2 bg-white text-primary">Recommended</Badge>
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentMode === "one-off" ? "default" : "outline"}
+                        className="flex-1"
+                        onClick={() => setPaymentMode("one-off")}
+                      >
+                        One-Off Purchase
+                      </Button>
                     </div>
                   </div>
 
+                  {/* Quantity Selection - Radio Button Grid */}
+                  <div className="space-y-3">
+                    <Label>Select Quantity</Label>
+                    <RadioGroup
+                      value={quantity.toString()}
+                      onValueChange={(value) => setQuantity(parseInt(value))}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    >
+                      {(paymentMode === "subscription" 
+                        ? PRICING_CONFIG.subscription 
+                        : PRICING_CONFIG.oneOff
+                      ).map((tier) => {
+                        const isSelected = quantity === tier.quantity;
+                        
+                        return (
+                          <label
+                            key={tier.quantity}
+                            htmlFor={`quantity-${tier.quantity}`}
+                            className={`
+                              relative flex cursor-pointer rounded-lg border-2 p-4 transition-all
+                              ${isSelected 
+                                ? 'border-primary bg-primary/5 shadow-md' 
+                                : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                              }
+                            `}
+                          >
+                            <RadioGroupItem
+                              value={tier.quantity.toString()}
+                              id={`quantity-${tier.quantity}`}
+                              className="sr-only"
+                            />
+                            
+                            <div className="flex-1 space-y-1">
+                              {/* Quantity Heading */}
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-base">
+                                  {tier.quantity} {paymentMode === "subscription" ? "per month" : "units"}
+                                </span>
+                                {tier.isPopular && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    POPULAR
+                                  </Badge>
+                                )}
+                                {tier.isBestValue && (
+                                  <Badge variant="default" className="text-xs">
+                                    BEST VALUE
+                                  </Badge>
+                                )}
+                              </div>
+                              
+                              {/* Pricing Display */}
+                              <div className="text-sm">
+                                <span className="font-bold text-lg">
+                                  {formatPrice(tier.total)}
+                                </span>
+                                {paymentMode === "subscription" && (
+                                  <span className="text-muted-foreground">/mo</span>
+                                )}
+                              </div>
+                              
+                              {/* Unit Price */}
+                              <div className="text-xs text-muted-foreground">
+                                {formatPrice(tier.unitPrice)} per keyring
+                              </div>
+                              
+                              {/* Savings Badge (only if discount > 0) */}
+                              {tier.discount && tier.discount > 0 && (
+                                <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                                  Save {tier.discount}% vs one-off
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Selection Indicator */}
+                            {isSelected && (
+                              <div className="absolute top-2 right-2">
+                                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                  <svg
+                                    className="h-3 w-3 text-white"
+                                    fill="currentColor"
+                                    viewBox="0 0 12 12"
+                                  >
+                                    <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                          </label>
+                        );
+                      })}
+                    </RadioGroup>
+                  </div>
+
+                  {/* Promo Code (Optional) */}
                   <div className="space-y-2">
                     <Label htmlFor="promoCode">Promo Code (Optional)</Label>
                     <Input
@@ -295,7 +401,7 @@ const Order = () => {
                   </div>
 
                   {step === 2 && (
-                    <Button onClick={() => setStep(3)} className="w-full">
+                    <Button onClick={() => setStep(3)} className="w-full" size="lg">
                       Continue to Contact Details
                     </Button>
                   )}
@@ -372,7 +478,6 @@ const Order = () => {
                 keyringType: selectedVariantData?.type || "",
                 color: selectedVariantData?.color || "",
                 quantity: quantity,
-                customQuantity: "",
                 paymentMode: paymentMode,
               }}
             />

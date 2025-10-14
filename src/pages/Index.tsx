@@ -24,9 +24,9 @@ const Index = () => {
     phone: "",
     keyringType: "",
     color: "",
-    quantity: "",
+    quantity: 25,
     customQuantity: "",
-    paymentMode: "one-off",
+    paymentMode: "one-off" as "one-off" | "subscription",
     promoCode: "",
   });
 
@@ -49,11 +49,11 @@ const Index = () => {
   ];
 
   const quantities = [
-    { id: "10", label: "10 units" },
-    { id: "25", label: "25 units" },
-    { id: "50", label: "50 units" },
-    { id: "100", label: "100 units" },
-    { id: "custom", label: "Custom quantity" },
+    { id: 10, label: "10 units" },
+    { id: 25, label: "25 units" },
+    { id: 50, label: "50 units" },
+    { id: 100, label: "100 units" },
+    { id: 250, label: "250 units" },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,15 +78,6 @@ const Index = () => {
       return;
     }
 
-    if (formData.quantity === "custom" && !formData.customQuantity) {
-      toast({
-        title: "Custom Quantity Required",
-        description: "Please enter your custom quantity",
-        variant: "destructive",
-      });
-      return;
-    }
-
     toast({
       title: "Order Submitted!",
       description: "Redirecting to payment...",
@@ -104,7 +95,7 @@ const Index = () => {
       case 1:
         return !!(formData.keyringType && formData.color);
       case 2:
-        return !!formData.quantity && (formData.quantity !== "custom" || formData.customQuantity);
+        return !!formData.quantity;
       case 3:
         return true; // Payment mode has default
       default:
@@ -326,28 +317,6 @@ const Index = () => {
                           </button>
                         ))}
                       </div>
-
-                      {formData.quantity === "custom" && (
-                        <div className="space-y-2 animate-fade-in mt-4">
-                          <Label htmlFor="customQuantity" className="text-sm font-medium">
-                            Enter Custom Quantity *
-                          </Label>
-                          <Input
-                            id="customQuantity"
-                            type="number"
-                            min="1"
-                            placeholder="Enter quantity"
-                            value={formData.customQuantity}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                customQuantity: e.target.value,
-                              })
-                            }
-                            className="h-12 rounded-lg"
-                          />
-                        </div>
-                      )}
                     </div>
                   )}
 
@@ -365,7 +334,7 @@ const Index = () => {
                       <RadioGroup
                         value={formData.paymentMode}
                         onValueChange={(value) =>
-                          setFormData({ ...formData, paymentMode: value })
+                          setFormData({ ...formData, paymentMode: value as "one-off" | "subscription" })
                         }
                         className="space-y-3"
                       >

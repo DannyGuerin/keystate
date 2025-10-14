@@ -28,10 +28,11 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    const { orderId, paymentMode } = await req.json();
-    logStep("Request received", { orderId, paymentMode });
+    const { orderId, paymentMode, priceId } = await req.json();
+    logStep("Request received", { orderId, paymentMode, priceId });
 
     if (!orderId) throw new Error("Order ID is required");
+    if (!priceId) throw new Error("Price ID is required");
 
     // Fetch order details
     const { data: order, error: orderError } = await supabaseClient
@@ -54,27 +55,16 @@ serve(async (req) => {
       throw new Error("Order not found");
     }
 
-    logStep("Order fetched", { orderStatus: order.status });
-
-    // Calculate price (example: £5 per keyring for testing)
-    const unitPrice = 500; // £5.00 in pence
-    const totalAmount = unitPrice * order.quantity;
+    logStep("Order fetched", { orderStatus: order.status, quantity: order.quantity });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session
+    // Create Stripe checkout session using the Price ID from frontend
     const sessionParams: any = {
       line_items: [
         {
-          price_data: {
-            currency: "gbp",
-            product_data: {
-              name: `${order.keyring_variants?.type || 'Keyring'} - ${order.keyring_variants?.color || 'Standard'}`,
-              description: `Order for ${order.campaigns?.company_name || 'Company'}`,
-            },
-            unit_amount: unitPrice,
-          },
-          quantity: order.quantity,
+          price: priceId, // Use the Stripe Price ID directly
+          quantity: 1, // Quantity is baked into the price (e.g., "25 units/month")
         },
       ],
       mode: paymentMode === "subscription" ? "subscription" : "payment",
@@ -86,15 +76,10 @@ serve(async (req) => {
       },
       metadata: {
         order_id: orderId,
+        quantity: order.quantity,
+        payment_mode: paymentMode,
       },
     };
-
-    // For subscriptions, adjust the price_data structure
-    if (paymentMode === "subscription") {
-      sessionParams.line_items[0].price_data.recurring = {
-        interval: "month",
-      };
-    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     logStep("Checkout session created", { sessionId: session.id });
