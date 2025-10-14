@@ -14,7 +14,7 @@ export default function LandingHero() {
     <section className="relative overflow-hidden py-20 md:py-32">
       {/* Background Image */}
       <div 
-        className="absolute inset-0 bg-cover bg-center opacity-10"
+        className="absolute inset-0 bg-cover bg-center opacity-20"
         style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
       />
       
