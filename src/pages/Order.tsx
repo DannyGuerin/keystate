@@ -112,41 +112,20 @@ const Order = () => {
       return;
     }
 
-    // Create draft order
-    const { data: orderData, error: orderError } = await supabase
-      .from("orders")
-      .insert([{
-        campaign_id: campaign.id,
-        keyring_variant_id: selectedVariant,
-        customer_name: name,
-        customer_email: email,
-        customer_phone: phone || null,
-        quantity: quantity,
-        payment_mode: paymentMode,
-        promo_code: promoCode || null,
-        status: "pending_payment" as const,
-      }])
-      .select()
-      .single();
-
-    if (orderError || !orderData) {
-      toast({
-        title: "Order creation failed",
-        description: orderError?.message || "Unable to create order",
-        variant: "destructive",
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    // Create Stripe checkout session
+    // Create order and checkout session via edge function
     const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
       "create-checkout",
       {
         body: {
-          orderId: orderData.id,
+          campaignId: campaign.id,
+          variantId: selectedVariant,
+          customerName: name,
+          customerEmail: email,
+          customerPhone: phone || null,
+          quantity: quantity,
           paymentMode: paymentMode,
           priceId: pricingTier.priceId,
+          promoCode: promoCode || null,
         },
       }
     );

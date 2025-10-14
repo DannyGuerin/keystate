@@ -28,34 +28,62 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_ANON_KEY") ?? ""
     );
 
-    const { orderId, paymentMode, priceId } = await req.json();
-    logStep("Request received", { orderId, paymentMode, priceId });
+    const { 
+      campaignId, 
+      variantId, 
+      customerName, 
+      customerEmail, 
+      customerPhone,
+      quantity, 
+      paymentMode, 
+      priceId,
+      promoCode 
+    } = await req.json();
+    
+    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
-    if (!orderId) throw new Error("Order ID is required");
+    if (!campaignId) throw new Error("Campaign ID is required");
+    if (!variantId) throw new Error("Variant ID is required");
+    if (!customerName) throw new Error("Customer name is required");
+    if (!customerEmail) throw new Error("Customer email is required");
+    if (!quantity) throw new Error("Quantity is required");
     if (!priceId) throw new Error("Price ID is required");
 
-    // Fetch order details
+    // Fetch campaign details for checkout metadata
+    const { data: campaign, error: campaignError } = await supabaseClient
+      .from("campaigns")
+      .select("company_name, unique_code")
+      .eq("id", campaignId)
+      .single();
+
+    if (campaignError || !campaign) {
+      logStep("Campaign fetch error", campaignError);
+      throw new Error("Campaign not found");
+    }
+
+    // Create order record
     const { data: order, error: orderError } = await supabaseClient
       .from("orders")
-      .select(`
-        *,
-        keyring_variants (
-          type,
-          color
-        ),
-        campaigns (
-          company_name
-        )
-      `)
-      .eq("id", orderId)
+      .insert([{
+        campaign_id: campaignId,
+        keyring_variant_id: variantId,
+        customer_name: customerName,
+        customer_email: customerEmail,
+        customer_phone: customerPhone || null,
+        quantity: quantity,
+        payment_mode: paymentMode,
+        promo_code: promoCode || null,
+        status: "pending_payment" as const,
+      }])
+      .select()
       .single();
 
     if (orderError || !order) {
-      logStep("Order fetch error", orderError);
-      throw new Error("Order not found");
+      logStep("Order creation error", orderError);
+      throw new Error("Failed to create order");
     }
 
-    logStep("Order fetched", { orderStatus: order.status, quantity: order.quantity });
+    logStep("Order created", { orderId: order.id, quantity: order.quantity });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
@@ -69,14 +97,14 @@ serve(async (req) => {
       ],
       mode: paymentMode === "subscription" ? "subscription" : "payment",
       success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/order/${order.campaigns?.unique_code || ''}`,
+      cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
       customer_email: order.customer_email,
       shipping_address_collection: {
         allowed_countries: ["GB", "US", "CA", "AU", "IE"],
       },
       metadata: {
-        order_id: orderId,
-        quantity: order.quantity,
+        order_id: order.id,
+        quantity: quantity,
         payment_mode: paymentMode,
       },
     };
@@ -88,10 +116,9 @@ serve(async (req) => {
     await supabaseClient
       .from("orders")
       .update({ 
-        stripe_session_id: session.id,
-        status: "pending_payment"
+        stripe_session_id: session.id
       })
-      .eq("id", orderId);
+      .eq("id", order.id);
 
     return new Response(JSON.stringify({ url: session.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
