@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import premiumQualityIcon from "@/assets/premium-quality-icon.png";
 import customBrandingIcon from "@/assets/custom-branding-icon.png";
 import fastDeliveryIcon from "@/assets/fast-delivery-icon.png";
+import simpleOrderingIcon from "@/assets/simple-ordering-icon.png";
 
 const features = [
   {
@@ -101,6 +102,14 @@ export default function FeaturesSection() {
                     <div className="w-16 h-16 mx-auto mb-4">
                       <img 
                         src={fastDeliveryIcon} 
+                        alt={feature.title}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : feature.title === "Simple Ordering" ? (
+                    <div className="w-16 h-16 mx-auto mb-4">
+                      <img 
+                        src={simpleOrderingIcon} 
                         alt={feature.title}
                         className="w-full h-full object-contain"
                       />
