@@ -3,6 +3,7 @@ import { Award, Palette, Zap, ShoppingCart } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import premiumQualityIcon from "@/assets/premium-quality-icon.png";
 
 const features = [
   {
@@ -78,7 +79,15 @@ export default function FeaturesSection() {
             return (
               <Card key={feature.title} className="border-2 hover:border-primary/20 transition-colors">
                 <CardHeader>
-                  {loadingImages[feature.title] ? (
+                  {feature.title === "Premium Quality" ? (
+                    <div className="w-16 h-16 mx-auto mb-4">
+                      <img 
+                        src={premiumQualityIcon} 
+                        alt={feature.title}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : loadingImages[feature.title] ? (
                     <Skeleton className="w-full h-32 rounded-lg mb-4" />
                   ) : featureImages[feature.title] ? (
                     <img 
