@@ -21,6 +21,7 @@ interface Campaign {
   company_address: string | null;
   company_postcode: string | null;
   status: string;
+  logo_url: string | null;
 }
 
 interface KeyringVariant {
@@ -172,7 +173,14 @@ const Order = () => {
       {/* Header */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-center">
+          <div className="flex items-center justify-center gap-4">
+            {campaign.logo_url && (
+              <img 
+                src={campaign.logo_url} 
+                alt={campaign.company_name}
+                className="h-12 w-auto object-contain"
+              />
+            )}
             <img 
               src="/src/assets/keystate-logo.png" 
               alt="KEYSTATE" 

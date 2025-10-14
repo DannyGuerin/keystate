@@ -23,6 +23,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          logo_url: string | null
           notes: string | null
           status: Database["public"]["Enums"]["campaign_status"]
           unique_code: string
@@ -35,6 +36,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          logo_url?: string | null
           notes?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           unique_code: string
@@ -47,6 +49,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           id?: string
+          logo_url?: string | null
           notes?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
           unique_code?: string

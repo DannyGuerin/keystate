@@ -38,6 +38,7 @@ const CampaignBuilder = () => {
   const [variants, setVariants] = useState<KeyringVariant[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   const campaignUrl = `${getPublicBaseUrl()}/order/${uniqueCode}`;
 
@@ -72,6 +73,7 @@ const CampaignBuilder = () => {
     setUniqueCode(campaign.unique_code);
     setStatus(campaign.status);
     setNotes(campaign.notes || "");
+    setLogoUrl(campaign.logo_url || null);
 
     const { data: variantsData } = await supabase
       .from("keyring_variants")
@@ -138,6 +140,29 @@ const CampaignBuilder = () => {
     updateVariant(index, "image_url", publicUrl);
   };
 
+  const uploadLogo = async (file: File) => {
+    const fileExt = file.name.split(".").pop();
+    const fileName = `logo-${Math.random()}.${fileExt}`;
+    const { error: uploadError, data } = await supabase.storage
+      .from("campaign-logos")
+      .upload(fileName, file);
+
+    if (uploadError) {
+      toast({
+        title: "Upload failed",
+        description: uploadError.message,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const { data: { publicUrl } } = supabase.storage
+      .from("campaign-logos")
+      .getPublicUrl(fileName);
+
+    setLogoUrl(publicUrl);
+  };
+
   const saveCampaign = async () => {
     if (!companyName || !uniqueCode || variants.length === 0) {
       toast({
@@ -161,6 +186,7 @@ const CampaignBuilder = () => {
       status,
       notes,
       created_by: user?.id,
+      logo_url: logoUrl,
     };
 
     let campaignId = id;
@@ -304,6 +330,30 @@ const CampaignBuilder = () => {
                 onChange={(e) => setContactPerson(e.target.value)}
                 placeholder="John Smith"
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="logo">Company Logo (Optional)</Label>
+              <div className="flex gap-3 items-center">
+                <Input
+                  type="file"
+                  id="logo"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) uploadLogo(file);
+                  }}
+                />
+                {logoUrl && (
+                  <img
+                    src={logoUrl}
+                    alt="Company logo"
+                    className="h-16 w-auto object-contain rounded border p-1"
+                  />
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                This logo will appear at the top of the order form for customers
+              </p>
             </div>
           </CardContent>
         </Card>
