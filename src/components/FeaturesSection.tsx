@@ -4,6 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import premiumQualityIcon from "@/assets/premium-quality-icon.png";
+import customBrandingIcon from "@/assets/custom-branding-icon.png";
 
 const features = [
   {
@@ -83,6 +84,14 @@ export default function FeaturesSection() {
                     <div className="w-16 h-16 mx-auto mb-4">
                       <img 
                         src={premiumQualityIcon} 
+                        alt={feature.title}
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
+                  ) : feature.title === "Custom Branding" ? (
+                    <div className="w-16 h-16 mx-auto mb-4">
+                      <img 
+                        src={customBrandingIcon} 
                         alt={feature.title}
                         className="w-full h-full object-contain"
                       />
