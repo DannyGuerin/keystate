@@ -1,35 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import keystateLogoUrl from "@/assets/keystate-logo.png";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import heroBackgroundUrl from "@/assets/hero-background.jpg";
 
 export default function LandingHero() {
-  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    const generateBackgroundImage = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke('generate-image', {
-          body: {
-            prompt: "Flat illustration of a charming neighborhood street with modern houses, minimalist style with clean lines, warm orange accents on details, soft pastel colors, white and light background, peaceful residential atmosphere, digital art, high quality, 16:9 aspect ratio, ultra high resolution, architectural illustration"
-          }
-        });
-
-        if (error) throw error;
-        if (data?.image) {
-          setBackgroundImage(data.image);
-        }
-      } catch (error) {
-        console.error("Failed to generate background image:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    generateBackgroundImage();
-  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -39,16 +13,10 @@ export default function LandingHero() {
   return (
     <section className="relative overflow-hidden py-20 md:py-32">
       {/* Background Image */}
-      {isLoading ? (
-        <div className="absolute inset-0 bg-gradient-to-b from-background to-muted/20" />
-      ) : backgroundImage ? (
-        <div 
-          className="absolute inset-0 bg-cover bg-center opacity-10"
-          style={{ backgroundImage: `url(${backgroundImage})` }}
-        />
-      ) : (
-        <div className="absolute inset-0 bg-gradient-to-b from-background to-muted/20" />
-      )}
+      <div 
+        className="absolute inset-0 bg-cover bg-center opacity-10"
+        style={{ backgroundImage: `url(${heroBackgroundUrl})` }}
+      />
       
       <div className="container mx-auto px-4 relative z-10">
         <div className="flex flex-col items-center text-center">
