@@ -5,7 +5,7 @@ export default function ProcessTimeline() {
     {
       icon: Palette,
       title: "Select Keyring Logo Design",
-      description: "Choose from our range of designs or upload your custom logo",
+      description: "Using your logo, we'll create the initial design",
     },
     {
       icon: Calculator,
