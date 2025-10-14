@@ -10,7 +10,7 @@ export default function ProcessTimeline() {
     {
       icon: Calculator,
       title: "Choose the Right Amount",
-      description: "Select the quantity that matches your campaign needs",
+      description: "Select the quantity that matches your business needs",
     },
     {
       icon: Package,
