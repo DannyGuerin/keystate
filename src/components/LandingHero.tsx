@@ -31,7 +31,7 @@ export default function LandingHero() {
           </h1>
           
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl">
-            High-quality, custom-branded keyrings that make a lasting impression. 
+            High-quality, custom-branded keyrings that keep your agency in your clients' hands. 
             Simple ordering, fast delivery, exceptional craftsmanship.
           </p>
           

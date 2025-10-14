@@ -60,7 +60,7 @@ export default function CodeEntrySection() {
   };
 
   return (
-    <section id="code-entry" className="py-16 md:py-24 bg-muted/30">
+    <section id="code-entry" className="py-16 md:py-24 bg-gradient-to-t from-[hsl(14,100%,57%)] to-white">
       <div className="container mx-auto px-4 max-w-2xl">
         <Card className="border-2">
           <CardHeader className="text-center">
