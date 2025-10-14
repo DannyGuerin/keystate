@@ -97,6 +97,42 @@ export type Database = {
           },
         ]
       }
+      leads: {
+        Row: {
+          company_name: string
+          contact_name: string
+          created_at: string
+          email: string
+          id: string
+          message: string | null
+          phone: string | null
+          status: Database["public"]["Enums"]["lead_status"]
+          updated_at: string
+        }
+        Insert: {
+          company_name: string
+          contact_name: string
+          created_at?: string
+          email: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string
+          contact_name?: string
+          created_at?: string
+          email?: string
+          id?: string
+          message?: string | null
+          phone?: string | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           campaign_id: string
@@ -221,6 +257,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       campaign_status: "draft" | "active" | "paused" | "completed"
+      lead_status: "new" | "contacted" | "converted" | "closed"
       order_status:
         | "pending"
         | "confirmed"
@@ -359,6 +396,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "user"],
       campaign_status: ["draft", "active", "paused", "completed"],
+      lead_status: ["new", "contacted", "converted", "closed"],
       order_status: [
         "pending",
         "confirmed",
