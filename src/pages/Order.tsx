@@ -101,48 +101,99 @@ const Order = () => {
 
     setSubmitting(true);
 
-    // Get the appropriate Stripe Price ID
-    const pricingTier = getPricingTier(quantity, paymentMode);
-    if (!pricingTier) {
-      toast({
-        title: "Invalid selection",
-        description: "Please select a valid quantity",
-        variant: "destructive",
-      });
-      setSubmitting(false);
-      return;
-    }
-
-    // Create order and checkout session via edge function
-    const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
-      "create-checkout",
-      {
-        body: {
-          campaignId: campaign.id,
-          variantId: selectedVariant,
-          customerName: name,
-          customerEmail: email,
-          customerPhone: phone || null,
-          quantity: quantity,
-          paymentMode: paymentMode,
-          priceId: pricingTier.priceId,
-          promoCode: promoCode || null,
-        },
+    try {
+      // Get the appropriate Stripe Price ID
+      const pricingTier = getPricingTier(quantity, paymentMode);
+      if (!pricingTier) {
+        toast({
+          title: "Invalid selection",
+          description: "Please select a valid quantity",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
       }
-    );
 
-    if (checkoutError || !checkoutData?.url) {
+      console.log("Creating checkout session with:", {
+        campaignId: campaign.id,
+        variantId: selectedVariant,
+        quantity,
+        paymentMode,
+        priceId: pricingTier.priceId,
+      });
+
+      // Create order and checkout session via edge function
+      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+        "create-checkout",
+        {
+          body: {
+            campaignId: campaign.id,
+            variantId: selectedVariant,
+            customerName: name,
+            customerEmail: email,
+            customerPhone: phone || null,
+            quantity: quantity,
+            paymentMode: paymentMode,
+            priceId: pricingTier.priceId,
+            promoCode: promoCode || null,
+          },
+        }
+      );
+
+      if (checkoutError) {
+        console.error("Checkout error:", checkoutError);
+        toast({
+          title: "Checkout failed",
+          description: checkoutError?.message || "Unable to create checkout session",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      if (!checkoutData?.url) {
+        console.error("No checkout URL returned:", checkoutData);
+        toast({
+          title: "Checkout failed",
+          description: "No checkout URL received from server",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      console.log("Redirecting to Stripe checkout:", checkoutData.url);
+      
+      // Show a loading toast
+      toast({
+        title: "Redirecting to checkout...",
+        description: "Please wait while we redirect you to Stripe",
+      });
+
+      // Set a timeout to warn if redirect takes too long
+      const timeoutId = setTimeout(() => {
+        console.warn("Stripe checkout is taking longer than expected");
+        toast({
+          title: "Loading...",
+          description: "If this takes too long, please check your connection",
+          variant: "default",
+        });
+      }, 5000);
+
+      // Redirect to Stripe Checkout
+      window.location.href = checkoutData.url;
+      
+      // Clear timeout if redirect happens quickly
+      clearTimeout(timeoutId);
+    } catch (error) {
+      console.error("Unexpected error during checkout:", error);
       toast({
         title: "Checkout failed",
-        description: checkoutError?.message || "Unable to create checkout session",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
       setSubmitting(false);
-      return;
     }
-
-    // Redirect to Stripe Checkout
-    window.location.href = checkoutData.url;
   };
 
   if (loading) {

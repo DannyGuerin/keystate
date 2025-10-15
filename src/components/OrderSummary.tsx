@@ -13,28 +13,6 @@ interface OrderSummaryProps {
 }
 
 export const OrderSummary = ({ formData }: OrderSummaryProps) => {
-  const getKeyringTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      "classic-round": "Classic Round",
-      "classic-square": "Classic Square",
-      "premium-round": "Premium Round",
-      "premium-square": "Premium Square",
-      "luxury-house": "Luxury House Shape",
-    };
-    return labels[type] || "Not selected";
-  };
-
-  const getColorLabel = (color: string) => {
-    const labels: Record<string, string> = {
-      "silver": "Silver",
-      "gold": "Gold",
-      "rose-gold": "Rose Gold",
-      "black": "Black",
-      "blue": "Blue",
-    };
-    return labels[color] || "Not selected";
-  };
-
   // Get pricing information
   const pricingTier = formData.quantity 
     ? getPricingTier(formData.quantity, formData.paymentMode)
@@ -50,14 +28,14 @@ export const OrderSummary = ({ formData }: OrderSummaryProps) => {
           <div className="flex justify-between items-start">
             <span className="text-sm text-muted-foreground">Keyring Type</span>
             <span className="text-sm font-medium text-right max-w-[150px]">
-              {formData.keyringType ? getKeyringTypeLabel(formData.keyringType) : "—"}
+              {formData.keyringType || "—"}
             </span>
           </div>
 
           <div className="flex justify-between items-start">
             <span className="text-sm text-muted-foreground">Colour</span>
             <span className="text-sm font-medium">
-              {formData.color ? getColorLabel(formData.color) : "—"}
+              {formData.color || "—"}
             </span>
           </div>
 
