@@ -59,14 +59,12 @@ const Order = () => {
   }, [code]);
 
   const fetchCampaign = async () => {
+    // Use the secure database function that only exposes essential campaign data
     const { data: campaignData, error: campaignError } = await supabase
-      .from("campaigns")
-      .select("*")
-      .eq("unique_code", code)
-      .eq("status", "active")
-      .single();
+      .rpc("get_campaign_for_order", { campaign_code: code });
 
-    if (campaignError || !campaignData) {
+    if (campaignError || !campaignData || campaignData.length === 0) {
+      console.error("Campaign fetch error:", campaignError);
       toast({
         title: "Campaign not found",
         description: "This campaign link is invalid or inactive",
@@ -76,12 +74,18 @@ const Order = () => {
       return;
     }
 
-    setCampaign(campaignData);
+    // The RPC function returns an array, so get the first item
+    const campaign = campaignData[0];
+    setCampaign({
+      ...campaign,
+      company_address: null, // Not exposed for security
+      company_postcode: null, // Not exposed for security
+    });
 
     const { data: variantsData } = await supabase
       .from("keyring_variants")
       .select("*")
-      .eq("campaign_id", campaignData.id)
+      .eq("campaign_id", campaign.id)
       .eq("is_available", true)
       .order("sort_order");
 
@@ -256,12 +260,9 @@ const Order = () => {
                 <h2 className="text-xl font-heading font-bold mb-2">
                   Order for {campaign.company_name}
                 </h2>
-                {campaign.company_address && (
-                  <p className="text-sm text-muted-foreground">
-                    {campaign.company_address}
-                    {campaign.company_postcode && `, ${campaign.company_postcode}`}
-                  </p>
-                )}
+                <p className="text-sm text-muted-foreground">
+                  Customize your keyrings below
+                </p>
               </CardContent>
             </Card>
 
