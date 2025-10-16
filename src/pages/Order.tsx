@@ -22,6 +22,7 @@ interface Campaign {
   company_postcode: string | null;
   status: string;
   logo_url: string | null;
+  contact_person: string | null;
 }
 
 interface KeyringVariant {
@@ -225,17 +226,10 @@ const Order = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      {/* Header */}
+      {/* Header - KEYSTATE logo only */}
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-center gap-4">
-            {campaign.logo_url && (
-              <img 
-                src={campaign.logo_url} 
-                alt={campaign.company_name}
-                className="h-12 w-auto object-contain"
-              />
-            )}
+          <div className="flex items-center justify-center">
             <img 
               src="/src/assets/keystate-logo.png" 
               alt="KEYSTATE" 
@@ -246,6 +240,30 @@ const Order = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
+        {/* Hero Section - Company Logo & Agent Details */}
+        <div className="text-center mb-8 space-y-4">
+          {campaign.logo_url && (
+            <img 
+              src={campaign.logo_url} 
+              alt={campaign.company_name}
+              className="h-20 w-auto object-contain mx-auto"
+            />
+          )}
+          <div>
+            <h1 className="text-3xl font-heading font-bold mb-2">
+              {campaign.company_name}
+            </h1>
+            {campaign.contact_person && (
+              <p className="text-lg text-muted-foreground mb-1">
+                Your Agent: {campaign.contact_person}
+              </p>
+            )}
+            <p className="text-sm text-muted-foreground">
+              Customize your keyrings below
+            </p>
+          </div>
+        </div>
+
         <StepProgress 
           steps={["Select Keyring", "Order Details", "Contact Info"]}
           currentStep={step - 1}
@@ -254,17 +272,6 @@ const Order = () => {
         <div className="grid lg:grid-cols-3 gap-8 mt-8">
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Company Info Banner */}
-            <Card className="bg-primary/5 border-primary/20">
-              <CardContent className="pt-6">
-                <h2 className="text-xl font-heading font-bold mb-2">
-                  Order for {campaign.company_name}
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Customize your keyrings below
-                </p>
-              </CardContent>
-            </Card>
 
             {/* Step 1: Keyring Selection */}
             {step >= 1 && (
@@ -281,6 +288,7 @@ const Order = () => {
                           id={variant.id}
                           label={variant.type}
                           description={variant.color}
+                          imageUrl={variant.image_url}
                           selected={selectedVariant === variant.id}
                           onSelect={() => {
                             setSelectedVariant(variant.id);
@@ -289,14 +297,10 @@ const Order = () => {
                         />
                       ))}
                     </div>
-                    {selectedVariantData?.image_url && (
-                      <div className="mt-4">
-                        <img
-                          src={selectedVariantData.image_url}
-                          alt={selectedVariantData.type}
-                          className="h-48 w-auto mx-auto rounded-lg shadow-md"
-                        />
-                      </div>
+                    {variants.length === 1 && (
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Only option available for this campaign
+                      </p>
                     )}
                   </div>
                 </CardContent>

@@ -250,6 +250,7 @@ export type Database = {
         Args: { campaign_code: string }
         Returns: {
           company_name: string
+          contact_person: string
           id: string
           logo_url: string
           status: string
