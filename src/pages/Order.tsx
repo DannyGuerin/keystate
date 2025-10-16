@@ -65,9 +65,13 @@ const Order = () => {
   }, [code]);
 
   const fetchCampaign = async () => {
+    console.log("Fetching campaign with code:", code);
+    
     // Use the secure database function that only exposes essential campaign data
     const { data: campaignData, error: campaignError } = await supabase
       .rpc("get_campaign_for_order", { campaign_code: code });
+
+    console.log("Campaign RPC response:", { campaignData, campaignError });
 
     if (campaignError || !campaignData || campaignData.length === 0) {
       console.error("Campaign fetch error:", campaignError);
@@ -82,6 +86,7 @@ const Order = () => {
 
     // The RPC function returns an array, so get the first item
     const campaign = campaignData[0];
+    console.log("Campaign details:", campaign);
     setCampaign(campaign);
     
     // Pre-fill shipping details with campaign data
@@ -89,13 +94,14 @@ const Order = () => {
     setShippingAddress(campaign.company_address || "");
     setShippingPostcode(campaign.company_postcode || "");
 
-    const { data: variantsData } = await supabase
+    const { data: variantsData, error: variantsError } = await supabase
       .from("keyring_variants")
       .select("*")
       .eq("campaign_id", campaign.id)
       .eq("is_available", true)
       .order("sort_order");
 
+    console.log("Variants query response:", { variantsData, variantsError });
     setVariants(variantsData || []);
     setLoading(false);
   };
@@ -288,20 +294,28 @@ const Order = () => {
                       Select Your Keyring
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      {variants.map((variant) => (
-                        <KeyringTypeCard
-                          key={variant.id}
-                          id={variant.id}
-                          label={variant.type}
-                          description={variant.color}
-                          imageUrl={variant.image_url}
-                          selected={selectedVariant === variant.id}
-                          onSelect={() => {
-                            setSelectedVariant(variant.id);
-                            if (step === 1) setStep(2);
-                          }}
-                        />
-                      ))}
+                      {variants.length === 0 ? (
+                        <div className="col-span-2 text-center py-8">
+                          <p className="text-muted-foreground">
+                            No keyring options available for this campaign.
+                          </p>
+                        </div>
+                      ) : (
+                        variants.map((variant) => (
+                          <KeyringTypeCard
+                            key={variant.id}
+                            id={variant.id}
+                            label={variant.type}
+                            description={variant.color}
+                            imageUrl={variant.image_url}
+                            selected={selectedVariant === variant.id}
+                            onSelect={() => {
+                              setSelectedVariant(variant.id);
+                              if (step === 1) setStep(2);
+                            }}
+                          />
+                        ))
+                      )}
                     </div>
                     {variants.length === 1 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
