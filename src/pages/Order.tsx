@@ -129,13 +129,11 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // For now, we'll handle multiple variants by creating separate checkout sessions
-      // In a production app, you might want to create a single checkout with multiple line items
-      const firstVariantId = Object.keys(selectedVariants)[0];
-      const firstQuantity = selectedVariants[firstVariantId];
+      // Calculate total quantity across all variants
+      const totalQuantity = Object.values(selectedVariants).reduce((sum, qty) => sum + qty, 0);
       
-      // Get the appropriate Stripe Price ID for the first variant
-      const pricingTier = getPricingTier(firstQuantity, paymentMode);
+      // Get the appropriate Stripe Price ID based on total quantity
+      const pricingTier = getPricingTier(totalQuantity, paymentMode);
       if (!pricingTier) {
         toast({
           title: "Invalid selection",
@@ -146,10 +144,13 @@ const Order = () => {
         return;
       }
 
+      // Use the first variant ID for now (in production, you'd handle multiple variants differently)
+      const firstVariantId = Object.keys(selectedVariants)[0];
+
       console.log("Creating checkout session with:", {
         campaignId: campaign.id,
         variantId: firstVariantId,
-        quantity: firstQuantity,
+        quantity: totalQuantity,
         paymentMode,
         priceId: pricingTier.priceId,
       });
@@ -164,7 +165,7 @@ const Order = () => {
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
-            quantity: firstQuantity,
+            quantity: totalQuantity,
             paymentMode: paymentMode,
             priceId: pricingTier.priceId,
             promoCode: promoCode || null,
@@ -667,26 +668,10 @@ const Order = () => {
                   </div>
                   
                   <Button
-                    type="button"
-                    className="w-full"
-                    onClick={() => setStep(3)}
-                    disabled={Object.keys(selectedVariants).length === 0}
-                  >
-                    Continue to Checkout
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Step 3: Final Checkout */}
-            {detailsConfirmed && step >= 3 && (
-              <Card className="animate-fade-in">
-                <CardContent className="pt-6">
-                  <Button
                     onClick={handleSubmit} 
                     className="w-full" 
                     size="lg"
-                    disabled={submitting}
+                    disabled={submitting || Object.keys(selectedVariants).length === 0}
                   >
                     {submitting ? (
                       <>
@@ -694,7 +679,7 @@ const Order = () => {
                         Processing...
                       </>
                     ) : (
-                      "Proceed to Checkout"
+                      "Continue to Checkout"
                     )}
                   </Button>
                 </CardContent>
