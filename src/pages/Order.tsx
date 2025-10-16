@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
@@ -338,16 +338,134 @@ const Order = () => {
               </Card>
             )}
 
-            {/* Step 2: Quantity & Payment */}
+            {/* Step 2: Company Details & Order Details */}
             {step >= 2 && (
-              <Card className="animate-fade-in">
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="text-lg font-heading font-semibold">Order Details</h3>
-                  
-                  {/* Payment Mode Toggle */}
-                  <div className="space-y-2">
-                    <Label>Payment Type</Label>
-                    <div className="flex gap-2">
+              <>
+                {/* Company Details Card */}
+                <Card className="animate-fade-in">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-heading">Company Details</CardTitle>
+                    <CardDescription>
+                      Pre-filled with the estate agent's details. Edit if needed, then confirm.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-end mb-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {detailsEditing ? "Editing" : "Locked"}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingName">Company Name *</Label>
+                      <Input
+                        id="shippingName"
+                        value={shippingName}
+                        onChange={(e) => setShippingName(e.target.value)}
+                        placeholder="Company Name"
+                        readOnly={!detailsEditing}
+                        className={!detailsEditing ? "bg-muted" : undefined}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingAddress">Address</Label>
+                        <Input
+                          id="shippingAddress"
+                          value={shippingAddress}
+                          onChange={(e) => setShippingAddress(e.target.value)}
+                          placeholder="123 Business Street"
+                          readOnly={!detailsEditing}
+                          className={!detailsEditing ? "bg-muted" : undefined}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingPostcode">Postcode</Label>
+                        <Input
+                          id="shippingPostcode"
+                          value={shippingPostcode}
+                          onChange={(e) => setShippingPostcode(e.target.value)}
+                          placeholder="SW1A 1AA"
+                          readOnly={!detailsEditing}
+                          className={!detailsEditing ? "bg-muted" : undefined}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingContact">Contact Person</Label>
+                      <Input
+                        id="shippingContact"
+                        value={shippingContact}
+                        onChange={(e) => setShippingContact(e.target.value)}
+                        placeholder="John Doe"
+                        readOnly={!detailsEditing}
+                        className={!detailsEditing ? "bg-muted" : undefined}
+                      />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      {detailsEditing ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="sm:flex-1"
+                            onClick={() => {
+                              setDetailsEditing(false);
+                              setShippingName(campaign?.company_name || "");
+                              setShippingAddress(campaign?.company_address || "");
+                              setShippingPostcode(campaign?.company_postcode || "");
+                              setShippingContact(campaign?.contact_person || "");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className="sm:flex-1"
+                            onClick={() => {
+                              setDetailsEditing(false);
+                            }}
+                          >
+                            Save Changes
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="sm:flex-1"
+                            onClick={() => setDetailsEditing(true)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            className="sm:flex-1"
+                            onClick={() => setStep(3)}
+                          >
+                            Confirm
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Order Details Card */}
+                <Card className="animate-fade-in mt-6">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-heading">Order Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Payment Mode Toggle */}
+                    <div className="space-y-2">
+                      <Label>Payment Type</Label>
+                      <div className="flex gap-2">
                       <Button
                         type="button"
                         variant={paymentMode === "subscription" ? "default" : "outline"}
@@ -473,120 +591,9 @@ const Order = () => {
                       placeholder="Enter promo code"
                     />
                   </div>
-
-                  {/* Company Details Section */}
-                  <div className="border-t pt-6 space-y-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-heading font-semibold">Company Details</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        {detailsEditing ? "Editing" : "Locked"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Pre-filled with the estate agent's details. Edit if needed, then confirm.
-                    </p>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingName">Company Name *</Label>
-                      <Input
-                        id="shippingName"
-                        value={shippingName}
-                        onChange={(e) => setShippingName(e.target.value)}
-                        placeholder="Company Name"
-                        readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-muted" : undefined}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingAddress">Address</Label>
-                        <Input
-                          id="shippingAddress"
-                          value={shippingAddress}
-                          onChange={(e) => setShippingAddress(e.target.value)}
-                          placeholder="123 Business Street"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingPostcode">Postcode</Label>
-                        <Input
-                          id="shippingPostcode"
-                          value={shippingPostcode}
-                          onChange={(e) => setShippingPostcode(e.target.value)}
-                          placeholder="SW1A 1AA"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingContact">Contact Person</Label>
-                      <Input
-                        id="shippingContact"
-                        value={shippingContact}
-                        onChange={(e) => setShippingContact(e.target.value)}
-                        placeholder="John Doe"
-                        readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-muted" : undefined}
-                      />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                      {detailsEditing ? (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                              setShippingName(campaign?.company_name || "");
-                              setShippingAddress(campaign?.company_address || "");
-                              setShippingPostcode(campaign?.company_postcode || "");
-                              setShippingContact(campaign?.contact_person || "");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                              setStep(3);
-                            }}
-                          >
-                            Save & Confirm
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => setDetailsEditing(true)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1"
-                            onClick={() => setStep(3)}
-                          >
-                            Confirm Details
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
+            </>
             )}
 
             {/* Step 3: Contact Information */}
