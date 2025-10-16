@@ -401,13 +401,29 @@ const Index = () => {
 
           {/* Order Summary Sidebar */}
           <aside className="hidden lg:block">
-            <OrderSummary formData={formData} />
+            <OrderSummary 
+              variants={formData.keyringType && formData.color ? [{
+                id: "temp",
+                type: formData.keyringType,
+                color: formData.color,
+                quantity: formData.quantity
+              }] : []}
+              paymentMode={formData.paymentMode}
+            />
           </aside>
         </div>
 
         {/* Mobile Order Summary */}
         <div className="lg:hidden mt-8 max-w-6xl mx-auto">
-          <OrderSummary formData={formData} />
+          <OrderSummary 
+            variants={formData.keyringType && formData.color ? [{
+              id: "temp",
+              type: formData.keyringType,
+              color: formData.color,
+              quantity: formData.quantity
+            }] : []}
+            paymentMode={formData.paymentMode}
+          />
         </div>
       </main>
     </div>

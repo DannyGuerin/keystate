@@ -45,11 +45,10 @@ const Order = () => {
 
   // Form state
   const [step, setStep] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({});
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState(25);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
   
@@ -68,11 +67,11 @@ const Order = () => {
 
   // Auto-select when only one variant is available
   useEffect(() => {
-    if (variants.length === 1 && !selectedVariant) {
-      setSelectedVariant(variants[0].id);
+    if (variants.length === 1 && Object.keys(selectedVariants).length === 0) {
+      setSelectedVariants({ [variants[0].id]: 25 });
       if (step === 1) setStep(2);
     }
-  }, [variants, selectedVariant, step]);
+  }, [variants, selectedVariants, step]);
 
   const fetchCampaign = async () => {
     console.log("Fetching campaign with code:", code);
@@ -118,10 +117,10 @@ const Order = () => {
   };
 
   const handleSubmit = async () => {
-    if (!campaign || !selectedVariant || !name || !email || !quantity) {
+    if (!campaign || Object.keys(selectedVariants).length === 0 || !name || !email) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: "Please fill in all required fields and select at least one variant",
         variant: "destructive",
       });
       return;
@@ -130,8 +129,13 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // Get the appropriate Stripe Price ID
-      const pricingTier = getPricingTier(quantity, paymentMode);
+      // For now, we'll handle multiple variants by creating separate checkout sessions
+      // In a production app, you might want to create a single checkout with multiple line items
+      const firstVariantId = Object.keys(selectedVariants)[0];
+      const firstQuantity = selectedVariants[firstVariantId];
+      
+      // Get the appropriate Stripe Price ID for the first variant
+      const pricingTier = getPricingTier(firstQuantity, paymentMode);
       if (!pricingTier) {
         toast({
           title: "Invalid selection",
@@ -144,8 +148,8 @@ const Order = () => {
 
       console.log("Creating checkout session with:", {
         campaignId: campaign.id,
-        variantId: selectedVariant,
-        quantity,
+        variantId: firstVariantId,
+        quantity: firstQuantity,
         paymentMode,
         priceId: pricingTier.priceId,
       });
@@ -156,11 +160,11 @@ const Order = () => {
         {
           body: {
             campaignId: campaign.id,
-            variantId: selectedVariant,
+            variantId: firstVariantId,
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
-            quantity: quantity,
+            quantity: firstQuantity,
             paymentMode: paymentMode,
             priceId: pricingTier.priceId,
             promoCode: promoCode || null,
@@ -245,7 +249,16 @@ const Order = () => {
     );
   }
 
-  const selectedVariantData = variants.find(v => v.id === selectedVariant);
+  // Get variants with quantities for OrderSummary
+  const selectedVariantItems = Object.keys(selectedVariants).map(variantId => {
+    const variant = variants.find(v => v.id === variantId);
+    return variant ? {
+      id: variant.id,
+      type: variant.type,
+      color: variant.color,
+      quantity: selectedVariants[variantId]
+    } : null;
+  }).filter(Boolean) as Array<{id: string; type: string; color: string; quantity: number}>;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -450,17 +463,24 @@ const Order = () => {
                           </p>
                         </div>
                       ) : (
-                        variants.map((variant) => (
+                       variants.map((variant) => (
                           <KeyringTypeCard
                             key={variant.id}
                             id={variant.id}
                             label={variant.type}
                             description={variant.color}
                             imageUrl={variant.image_url}
-                            selected={selectedVariant === variant.id}
+                            selected={variant.id in selectedVariants}
                             onSelect={() => {
-                              setSelectedVariant(variant.id);
-                              if (step === 1) setStep(2);
+                              setSelectedVariants(prev => {
+                                const newSelected = { ...prev };
+                                if (variant.id in newSelected) {
+                                  delete newSelected[variant.id];
+                                } else {
+                                  newSelected[variant.id] = 25;
+                                }
+                                return newSelected;
+                              });
                             }}
                           />
                         ))
@@ -477,10 +497,11 @@ const Order = () => {
             )}
 
             {/* Step 2: Order Details */}
-            {detailsConfirmed && step >= 2 && (
+            {detailsConfirmed && step >= 2 && Object.keys(selectedVariants).length > 0 && (
                 <Card className="animate-fade-in mt-6">
                   <CardHeader>
                     <CardTitle className="text-xl font-heading">Order Details</CardTitle>
+                    <CardDescription>Select quantities for each variant</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Payment Mode Toggle */}
@@ -509,22 +530,49 @@ const Order = () => {
                     </div>
                   </div>
 
-                  {/* Quantity Selection - Radio Button Grid */}
-                  <div className="space-y-3">
-                    <Label>Select Quantity</Label>
-                     <RadioGroup
-                      value={quantity.toString()}
-                      onValueChange={(value) => {
-                        setQuantity(parseInt(value));
-                        if (step === 2) setStep(3);
-                      }}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                    >
-                      {(paymentMode === "subscription" 
-                        ? PRICING_CONFIG.subscription 
-                        : PRICING_CONFIG.oneOff
-                      ).map((tier) => {
-                        const isSelected = quantity === tier.quantity;
+                  {/* Quantity Selection for Each Variant */}
+                  {Object.keys(selectedVariants).map((variantId) => {
+                    const variant = variants.find(v => v.id === variantId);
+                    if (!variant) return null;
+
+                    return (
+                      <div key={variantId} className="space-y-3 p-4 border rounded-lg">
+                        <div className="flex justify-between items-center mb-3">
+                          <div>
+                            <h4 className="font-semibold">{variant.type}</h4>
+                            <p className="text-sm text-muted-foreground">{variant.color}</p>
+                          </div>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedVariants(prev => {
+                                const newSelected = { ...prev };
+                                delete newSelected[variantId];
+                                return newSelected;
+                              });
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        </div>
+                        <Label>Select Quantity</Label>
+                        <RadioGroup
+                          value={selectedVariants[variantId].toString()}
+                          onValueChange={(value) => {
+                            setSelectedVariants(prev => ({
+                              ...prev,
+                              [variantId]: parseInt(value)
+                            }));
+                          }}
+                          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                        >
+                          {(paymentMode === "subscription" 
+                            ? PRICING_CONFIG.subscription 
+                            : PRICING_CONFIG.oneOff
+                          ).map((tier) => {
+                            const isSelected = selectedVariants[variantId] === tier.quantity;
                         
                         return (
                           <label
@@ -601,9 +649,11 @@ const Order = () => {
                             )}
                           </label>
                         );
-                      })}
+                       })}
                     </RadioGroup>
-                  </div>
+                      </div>
+                    );
+                  })}
 
                   {/* Promo Code (Optional) */}
                   <div className="space-y-2">
@@ -615,6 +665,15 @@ const Order = () => {
                       placeholder="Enter promo code"
                     />
                   </div>
+                  
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={() => setStep(3)}
+                    disabled={Object.keys(selectedVariants).length === 0}
+                  >
+                    Continue to Checkout
+                  </Button>
                 </CardContent>
               </Card>
             )}
@@ -646,12 +705,8 @@ const Order = () => {
           {/* Order Summary Sidebar */}
           <div className="lg:sticky lg:top-24 h-fit">
             <OrderSummary
-              formData={{
-                keyringType: selectedVariantData?.type || "",
-                color: selectedVariantData?.color || "",
-                quantity: quantity,
-                paymentMode: paymentMode,
-              }}
+              variants={selectedVariantItems}
+              paymentMode={paymentMode}
             />
           </div>
         </div>
