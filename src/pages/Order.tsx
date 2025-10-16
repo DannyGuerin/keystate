@@ -463,6 +463,49 @@ const Order = () => {
                     />
                   </div>
 
+                  {/* Shipping Details Section */}
+                  <div className="border-t pt-6 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-heading font-semibold">Delivery Address</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        Editable
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Pre-filled with your company details. Edit if needed.
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingName">Recipient / Company Name</Label>
+                      <Input
+                        id="shippingName"
+                        value={shippingName}
+                        onChange={(e) => setShippingName(e.target.value)}
+                        placeholder="Company Name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingAddress">Street Address</Label>
+                      <Input
+                        id="shippingAddress"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="123 Business Street"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingPostcode">Postcode</Label>
+                      <Input
+                        id="shippingPostcode"
+                        value={shippingPostcode}
+                        onChange={(e) => setShippingPostcode(e.target.value)}
+                        placeholder="SW1A 1AA"
+                      />
+                    </div>
+                  </div>
+
                   {step === 2 && (
                     <Button onClick={() => setStep(3)} className="w-full" size="lg">
                       Continue to Contact Details
@@ -514,50 +557,7 @@ const Order = () => {
                     </div>
                   </div>
 
-                  {/* Shipping Details Section */}
-                  <div className="border-t pt-6 space-y-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="text-lg font-heading font-semibold">Delivery Address</h3>
-                      <Badge variant="secondary" className="text-xs">
-                        Editable
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Pre-filled with your company details. Edit if needed.
-                    </p>
-                    
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingName">Recipient / Company Name</Label>
-                      <Input
-                        id="shippingName"
-                        value={shippingName}
-                        onChange={(e) => setShippingName(e.target.value)}
-                        placeholder="Company Name"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingAddress">Street Address</Label>
-                      <Input
-                        id="shippingAddress"
-                        value={shippingAddress}
-                        onChange={(e) => setShippingAddress(e.target.value)}
-                        placeholder="123 Business Street"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingPostcode">Postcode</Label>
-                      <Input
-                        id="shippingPostcode"
-                        value={shippingPostcode}
-                        onChange={(e) => setShippingPostcode(e.target.value)}
-                        placeholder="SW1A 1AA"
-                      />
-                    </div>
-                  </div>
-
-                  <Button 
+                  <Button
                     onClick={handleSubmit} 
                     className="w-full" 
                     size="lg"
