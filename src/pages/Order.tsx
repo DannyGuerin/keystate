@@ -58,7 +58,7 @@ const Order = () => {
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingPostcode, setShippingPostcode] = useState("");
   const [shippingContact, setShippingContact] = useState("");
-  const [detailsEditing, setDetailsEditing] = useState(false);
+  const [detailsConfirmed, setDetailsConfirmed] = useState(false);
 
   useEffect(() => {
     if (code) {
@@ -296,8 +296,146 @@ const Order = () => {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
 
+            {/* Combined Details Form - Always visible at top */}
+            <Card className="animate-fade-in">
+              <CardHeader>
+                <CardTitle className="text-xl font-heading">Company & Contact Details</CardTitle>
+                <CardDescription>Review and confirm the details below</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Company Details Section */}
+                <div className="space-y-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Company Information</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingName">Company Name *</Label>
+                    <Input
+                      id="shippingName"
+                      value={shippingName}
+                      onChange={(e) => setShippingName(e.target.value)}
+                      placeholder="Company Name Ltd"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingAddress">Company Address *</Label>
+                    <Input
+                      id="shippingAddress"
+                      value={shippingAddress}
+                      onChange={(e) => setShippingAddress(e.target.value)}
+                      placeholder="123 Main Street, City"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingPostcode">Postcode *</Label>
+                    <Input
+                      id="shippingPostcode"
+                      value={shippingPostcode}
+                      onChange={(e) => setShippingPostcode(e.target.value)}
+                      placeholder="SW1A 1AA"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingContact">Contact Person *</Label>
+                    <Input
+                      id="shippingContact"
+                      value={shippingContact}
+                      onChange={(e) => setShippingContact(e.target.value)}
+                      placeholder="John Doe"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                    />
+                  </div>
+                </div>
+
+                <div className="border-t pt-6 space-y-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Contact Details</h3>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Full Name *</Label>
+                    <Input
+                      id="name"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="John Smith"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email Address *</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="john@example.com"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+44 7XXX XXXXXX"
+                      disabled={detailsConfirmed}
+                      className={detailsConfirmed ? "bg-muted" : undefined}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  {detailsConfirmed ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={() => setDetailsConfirmed(false)}
+                    >
+                      Edit Details
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="w-full"
+                      onClick={() => {
+                        if (!shippingName || !shippingAddress || !shippingPostcode || !shippingContact || !name || !email) {
+                          toast({
+                            title: "Missing information",
+                            description: "Please fill in all required fields",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                        setDetailsConfirmed(true);
+                        if (step === 1) setStep(2);
+                      }}
+                    >
+                      Confirm Details
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Step 1: Keyring Selection */}
-            {step >= 1 && (
+            {detailsConfirmed && step >= 1 && (
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <div>
@@ -338,125 +476,8 @@ const Order = () => {
               </Card>
             )}
 
-            {/* Step 2: Company Details & Order Details */}
-            {step >= 2 && (
-              <>
-                {/* Company Details Card */}
-                <Card className="animate-fade-in">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-heading">Company Details</CardTitle>
-                    <CardDescription>
-                      Pre-filled with the estate agent's details. Edit if needed, then confirm.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-end mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {detailsEditing ? "Editing" : "Locked"}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingName">Company Name *</Label>
-                      <Input
-                        id="shippingName"
-                        value={shippingName}
-                        onChange={(e) => setShippingName(e.target.value)}
-                        placeholder="Company Name"
-                        readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-muted" : undefined}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingAddress">Address</Label>
-                        <Input
-                          id="shippingAddress"
-                          value={shippingAddress}
-                          onChange={(e) => setShippingAddress(e.target.value)}
-                          placeholder="123 Business Street"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingPostcode">Postcode</Label>
-                        <Input
-                          id="shippingPostcode"
-                          value={shippingPostcode}
-                          onChange={(e) => setShippingPostcode(e.target.value)}
-                          placeholder="SW1A 1AA"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="shippingContact">Contact Person</Label>
-                      <Input
-                        id="shippingContact"
-                        value={shippingContact}
-                        onChange={(e) => setShippingContact(e.target.value)}
-                        placeholder="John Doe"
-                        readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-muted" : undefined}
-                      />
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                      {detailsEditing ? (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                              setShippingName(campaign?.company_name || "");
-                              setShippingAddress(campaign?.company_address || "");
-                              setShippingPostcode(campaign?.company_postcode || "");
-                              setShippingContact(campaign?.contact_person || "");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                            }}
-                          >
-                            Save Changes
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => setDetailsEditing(true)}
-                          >
-                            Edit
-                          </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1"
-                            onClick={() => setStep(3)}
-                          >
-                            Confirm
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Order Details Card */}
+            {/* Step 2: Order Details */}
+            {detailsConfirmed && step >= 2 && (
                 <Card className="animate-fade-in mt-6">
                   <CardHeader>
                     <CardTitle className="text-xl font-heading">Order Details</CardTitle>
@@ -593,51 +614,12 @@ const Order = () => {
                   </div>
                 </CardContent>
               </Card>
-            </>
             )}
 
-            {/* Step 3: Contact Information */}
-            {step >= 3 && (
+            {/* Step 3: Final Checkout */}
+            {detailsConfirmed && step >= 3 && (
               <Card className="animate-fade-in">
-                <CardContent className="pt-6 space-y-6">
-                  <h3 className="text-lg font-heading font-semibold">Your Details</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name *</Label>
-                      <Input
-                        id="name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="John Smith"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="john@example.com"
-                        required
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        placeholder="+44 7XXX XXXXXX"
-                      />
-                    </div>
-                  </div>
-
+                <CardContent className="pt-6">
                   <Button
                     onClick={handleSubmit} 
                     className="w-full" 

@@ -31,11 +31,11 @@ export const KeyringTypeCard = ({ id, label, description, imageUrl, selected, on
 
       {/* Image thumbnail or fallback icon */}
       {imageUrl ? (
-        <div className="w-20 h-20 rounded-lg overflow-hidden border-2 border-border">
+        <div className="w-32 h-32 rounded-lg overflow-hidden border-2 border-border">
           <img
             src={imageUrl}
             alt={label}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-contain"
           />
         </div>
       ) : (
