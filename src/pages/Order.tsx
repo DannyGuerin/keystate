@@ -577,7 +577,7 @@ const Order = () => {
                         return (
                           <label
                             key={tier.quantity}
-                            htmlFor={`quantity-${tier.quantity}`}
+                            htmlFor={`quantity-${variantId}-${tier.quantity}`}
                             className={`
                               relative flex cursor-pointer rounded-lg border-2 p-4 transition-all
                               ${isSelected 
@@ -588,7 +588,7 @@ const Order = () => {
                           >
                             <RadioGroupItem
                               value={tier.quantity.toString()}
-                              id={`quantity-${tier.quantity}`}
+                              id={`quantity-${variantId}-${tier.quantity}`}
                               className="sr-only"
                             />
                             
