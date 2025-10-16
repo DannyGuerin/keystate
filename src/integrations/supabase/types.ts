@@ -249,7 +249,9 @@ export type Database = {
       get_campaign_for_order: {
         Args: { campaign_code: string }
         Returns: {
+          company_address: string
           company_name: string
+          company_postcode: string
           contact_person: string
           id: string
           logo_url: string

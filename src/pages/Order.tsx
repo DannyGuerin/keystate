@@ -52,6 +52,11 @@ const Order = () => {
   const [quantity, setQuantity] = useState(25);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
+  
+  // Shipping details state - pre-filled from campaign
+  const [shippingName, setShippingName] = useState("");
+  const [shippingAddress, setShippingAddress] = useState("");
+  const [shippingPostcode, setShippingPostcode] = useState("");
 
   useEffect(() => {
     if (code) {
@@ -77,11 +82,12 @@ const Order = () => {
 
     // The RPC function returns an array, so get the first item
     const campaign = campaignData[0];
-    setCampaign({
-      ...campaign,
-      company_address: null, // Not exposed for security
-      company_postcode: null, // Not exposed for security
-    });
+    setCampaign(campaign);
+    
+    // Pre-fill shipping details with campaign data
+    setShippingName(campaign.company_name || "");
+    setShippingAddress(campaign.company_address || "");
+    setShippingPostcode(campaign.company_postcode || "");
 
     const { data: variantsData } = await supabase
       .from("keyring_variants")
@@ -490,6 +496,49 @@ const Order = () => {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
                         placeholder="+44 7XXX XXXXXX"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Shipping Details Section */}
+                  <div className="border-t pt-6 space-y-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-lg font-heading font-semibold">Delivery Address</h3>
+                      <Badge variant="secondary" className="text-xs">
+                        Editable
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Pre-filled with your company details. Edit if needed.
+                    </p>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingName">Recipient / Company Name</Label>
+                      <Input
+                        id="shippingName"
+                        value={shippingName}
+                        onChange={(e) => setShippingName(e.target.value)}
+                        placeholder="Company Name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingAddress">Street Address</Label>
+                      <Input
+                        id="shippingAddress"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="123 Business Street"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingPostcode">Postcode</Label>
+                      <Input
+                        id="shippingPostcode"
+                        value={shippingPostcode}
+                        onChange={(e) => setShippingPostcode(e.target.value)}
+                        placeholder="SW1A 1AA"
                       />
                     </div>
                   </div>
