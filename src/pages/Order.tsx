@@ -129,46 +129,40 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // Calculate total quantity across all variants
-      const totalQuantity = Object.values(selectedVariants).reduce((sum, qty) => sum + qty, 0);
-      
-      // Get the appropriate Stripe Price ID based on total quantity
-      const pricingTier = getPricingTier(totalQuantity, paymentMode);
-      if (!pricingTier) {
-        toast({
-          title: "Invalid selection",
-          description: "Please select a valid quantity",
-          variant: "destructive",
-        });
-        setSubmitting(false);
-        return;
-      }
-
-      // Use the first variant ID for now (in production, you'd handle multiple variants differently)
-      const firstVariantId = Object.keys(selectedVariants)[0];
-
-      console.log("Creating checkout session with:", {
-        campaignId: campaign.id,
-        variantId: firstVariantId,
-        quantity: totalQuantity,
-        paymentMode,
-        priceId: pricingTier.priceId,
+      // Build line items per selected variant based on individual quantities
+      const entries = Object.entries(selectedVariants);
+      const items = entries.map(([variantId, qty]) => {
+        const tier = getPricingTier(qty, paymentMode);
+        if (!tier) {
+          throw new Error("INVALID_TIER");
+        }
+        return { variantId, quantity: qty, priceId: tier.priceId };
       });
 
-      // Create order and checkout session via edge function
+      const totalQuantity = entries.reduce((sum, [, qty]) => sum + qty, 0);
+      const firstVariantId = entries[0][0];
+
+      console.log("Creating checkout session with (multi-variant):", {
+        campaignId: campaign.id,
+        firstVariantId,
+        totalQuantity,
+        paymentMode,
+        items,
+      });
+
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
         "create-checkout",
         {
           body: {
             campaignId: campaign.id,
-            variantId: firstVariantId,
+            variantId: firstVariantId, // kept for order linkage
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
             quantity: totalQuantity,
-            paymentMode: paymentMode,
-            priceId: pricingTier.priceId,
+            paymentMode,
             promoCode: promoCode || null,
+            items,
           },
         }
       );
@@ -220,11 +214,19 @@ const Order = () => {
       clearTimeout(timeoutId);
     } catch (error) {
       console.error("Unexpected error during checkout:", error);
-      toast({
-        title: "Checkout failed",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
+      if (error instanceof Error && error.message === "INVALID_TIER") {
+        toast({
+          title: "Invalid selection",
+          description: "Please select a valid quantity for each variant",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Checkout failed",
+          description: "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
       setSubmitting(false);
     }
   };

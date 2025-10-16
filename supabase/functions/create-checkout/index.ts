@@ -37,17 +37,28 @@ serve(async (req) => {
       quantity, 
       paymentMode, 
       priceId,
-      promoCode 
+      promoCode,
+      items 
     } = await req.json();
     
     logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
     if (!campaignId) throw new Error("Campaign ID is required");
-    if (!variantId) throw new Error("Variant ID is required");
     if (!customerName) throw new Error("Customer name is required");
     if (!customerEmail) throw new Error("Customer email is required");
-    if (!quantity) throw new Error("Quantity is required");
-    if (!priceId) throw new Error("Price ID is required");
+
+    const hasItems = Array.isArray(items) && items.length > 0;
+    if (!hasItems) {
+      if (!variantId) throw new Error("Variant ID is required");
+      if (!quantity) throw new Error("Quantity is required");
+      if (!priceId) throw new Error("Price ID is required");
+    } else {
+      for (const i of items) {
+        if (!i?.variantId || !i?.priceId || !i?.quantity) {
+          throw new Error("Invalid items payload");
+        }
+      }
+    }
 
     // Fetch campaign details for checkout metadata
     const { data: campaign, error: campaignError } = await supabaseClient
@@ -66,11 +77,11 @@ serve(async (req) => {
       .from("orders")
       .insert([{
         campaign_id: campaignId,
-        keyring_variant_id: variantId,
+        keyring_variant_id: variantId || (Array.isArray(items) && items[0]?.variantId) || null,
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone || null,
-        quantity: quantity,
+        quantity: quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0),
         payment_mode: paymentMode,
         promo_code: promoCode || null,
         status: "pending_payment" as const,
@@ -87,14 +98,15 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session using the Price ID from frontend
+    // Create Stripe checkout session supporting multi-variant line items
+    const lineItems = Array.isArray(items) && items.length > 0
+      ? items.map((i: any) => ({ price: i.priceId, quantity: 1 }))
+      : [{ price: priceId, quantity: 1 }];
+
+    const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
+
     const sessionParams: any = {
-      line_items: [
-        {
-          price: priceId, // Use the Stripe Price ID directly
-          quantity: 1, // Quantity is baked into the price (e.g., "25 units/month")
-        },
-      ],
+      line_items: lineItems,
       mode: paymentMode === "subscription" ? "subscription" : "payment",
       success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
@@ -104,8 +116,9 @@ serve(async (req) => {
       },
       metadata: {
         order_id: order.id,
-        quantity: quantity,
         payment_mode: paymentMode,
+        quantity: totalQty,
+        items: Array.isArray(items) ? JSON.stringify(items.map((i: any) => ({ variantId: i.variantId, quantity: i.quantity }))) : undefined,
       },
     };
 
