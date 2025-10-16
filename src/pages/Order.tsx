@@ -288,7 +288,7 @@ const Order = () => {
         </div>
 
         <StepProgress 
-          steps={["Select Keyring", "Order Details", "Contact Info"]}
+          steps={["Confirm Details", "Select Keyring", "Order Details"]}
           currentStep={step - 1}
         />
 
@@ -512,9 +512,12 @@ const Order = () => {
                   {/* Quantity Selection - Radio Button Grid */}
                   <div className="space-y-3">
                     <Label>Select Quantity</Label>
-                    <RadioGroup
+                     <RadioGroup
                       value={quantity.toString()}
-                      onValueChange={(value) => setQuantity(parseInt(value))}
+                      onValueChange={(value) => {
+                        setQuantity(parseInt(value));
+                        if (step === 2) setStep(3);
+                      }}
                       className="grid grid-cols-1 sm:grid-cols-2 gap-3"
                     >
                       {(paymentMode === "subscription" 
