@@ -87,10 +87,13 @@ const CampaignBuilder = () => {
   };
 
   const generateCode = () => {
-    const code = companyName
+    const cleanName = companyName
       .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .substring(0, 10) + new Date().getFullYear();
+      .replace(/[^A-Z0-9]/g, "");
+    const nameLength = cleanName.length >= 5 ? 5 : 4;
+    const namePart = cleanName.substring(0, nameLength);
+    const yearPart = String(new Date().getFullYear()).slice(-2);
+    const code = namePart + yearPart;
     setUniqueCode(code);
   };
 
