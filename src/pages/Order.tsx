@@ -14,7 +14,7 @@ import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Loader2 } from "lucide-react";
 import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
-import keystateLogoImage from "@/assets/keystate-logo.png";
+
 
 interface Campaign {
   id: string;
@@ -266,27 +266,6 @@ const Order = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-      {/* Header - KEYSTATE logo only */}
-      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-center">
-            <img 
-              src={keystateLogoImage} 
-              alt="KEYSTATE" 
-              className="h-8"
-              width={120}
-              height={24}
-              loading="eager"
-              onError={(e) => {
-                const img = e.currentTarget as HTMLImageElement;
-                if (img.src !== '/images/keystate-logo.png') {
-                  img.src = '/images/keystate-logo.png';
-                }
-              }}
-            />
-          </div>
-        </div>
-      </header>
 
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         {/* Hero Section - Company Logo & Agent Details */}
