@@ -274,6 +274,15 @@ const Order = () => {
               src={keystateLogoImage} 
               alt="KEYSTATE" 
               className="h-8"
+              width={120}
+              height={24}
+              loading="eager"
+              onError={(e) => {
+                const img = e.currentTarget as HTMLImageElement;
+                if (img.src !== '/images/keystate-logo.png') {
+                  img.src = '/images/keystate-logo.png';
+                }
+              }}
             />
           </div>
         </div>
