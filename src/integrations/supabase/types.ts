@@ -246,10 +246,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      campaign_is_active: {
-        Args: { _campaign_id: string }
-        Returns: boolean
-      }
+      campaign_is_active: { Args: { _campaign_id: string }; Returns: boolean }
       get_campaign_for_order: {
         Args: { campaign_code: string }
         Returns: {
