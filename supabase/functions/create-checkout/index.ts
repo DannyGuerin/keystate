@@ -41,6 +41,8 @@ serve(async (req) => {
       items 
     } = await req.json();
     
+    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId, items, itemsType: typeof items, itemsLength: items?.length });
+    
     // Validate coupon code if provided
     let couponId = null;
     let discountPercentage = 0;
@@ -73,7 +75,7 @@ serve(async (req) => {
       }
     }
     
-    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
+    
 
     if (!campaignId) throw new Error("Campaign ID is required");
     if (!customerName) throw new Error("Customer name is required");
