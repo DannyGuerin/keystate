@@ -338,29 +338,25 @@ const Order = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
-
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
-        {/* Hero Section - Company Logo & Agent Details */}
-        <div className="text-center mb-8 space-y-4">
+        {/* Company Logo & Details - Centered Hero */}
+        <div className="text-center mb-12 space-y-6">
           {campaign.logo_url && (
             <img 
               src={campaign.logo_url} 
               alt={campaign.company_name}
-              className="h-20 w-auto object-contain mx-auto"
+              className="h-24 w-auto object-contain mx-auto"
             />
           )}
-          <div>
-            <h1 className="text-3xl font-heading font-bold mb-2">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-heading font-bold">
               {campaign.company_name}
             </h1>
             {campaign.contact_person && (
-              <p className="text-lg text-muted-foreground mb-1">
-                Your Agent: {campaign.contact_person}
+              <p className="text-lg text-muted-foreground">
+                Your Agent: <span className="font-medium">{campaign.contact_person}</span>
               </p>
             )}
-            <p className="text-sm text-muted-foreground">
-              Customize your keyrings below
-            </p>
           </div>
         </div>
 
