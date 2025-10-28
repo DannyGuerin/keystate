@@ -8,9 +8,7 @@ export interface PricingTier {
   isBestValue?: boolean;
 }
 
-// Base unit prices - Stripe will multiply by quantity
-const UNIT_PRICE_ONE_OFF = "price_1SNKS1Rq8aA0Zjxf3qz776SY"; // £1.00 per unit
-const UNIT_PRICE_SUBSCRIPTION = "price_1SNKS0Rq8aA0Zjxfz2HSIBbp"; // £1.00 per unit per month
+// Force cache refresh by hardcoding correct price IDs
 
 export const PRICING_CONFIG = {
   oneOff: [
