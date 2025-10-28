@@ -133,8 +133,13 @@ serve(async (req) => {
 
     // Create Stripe checkout session supporting multi-variant line items
     const lineItems = Array.isArray(items) && items.length > 0
-      ? items.map((i: any) => ({ price: i.priceId, quantity: i.quantity }))
+      ? items.map((i: any) => {
+          logStep("Line item created", { priceId: i.priceId, quantity: i.quantity });
+          return { price: i.priceId, quantity: i.quantity };
+        })
       : [{ price: priceId, quantity: quantity }];
+    
+    logStep("All line items", { lineItems, hasItems: Array.isArray(items) && items.length > 0 });
 
     const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
 
