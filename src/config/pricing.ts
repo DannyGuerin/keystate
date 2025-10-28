@@ -8,32 +8,36 @@ export interface PricingTier {
   isBestValue?: boolean;
 }
 
+// Base unit prices - Stripe will multiply by quantity
+const UNIT_PRICE_ONE_OFF = "price_1SNKS1Rq8aA0Zjxf3qz776SY"; // £1.00 per unit
+const UNIT_PRICE_SUBSCRIPTION = "price_1SNKS0Rq8aA0Zjxfz2HSIBbp"; // £1.00 per unit per month
+
 export const PRICING_CONFIG = {
   oneOff: [
     {
       quantity: 10,
-      priceId: "price_1SHrNsRq8aA0ZjxfeOJ39fxH",
+      priceId: UNIT_PRICE_ONE_OFF,
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: "price_1SLKnxRq8aA0ZjxfbKwQFDSz",
+      priceId: UNIT_PRICE_ONE_OFF,
       unitPrice: 1.00,
       total: 25.00,
       discount: 0,
     },
     {
       quantity: 50,
-      priceId: "price_1SLKo1Rq8aA0ZjxfJh6YhoEA",
+      priceId: UNIT_PRICE_ONE_OFF,
       unitPrice: 1.00,
       total: 50.00,
       discount: 0,
     },
     {
       quantity: 100,
-      priceId: "price_1SLKo5Rq8aA0ZjxfWjs1rvTl",
+      priceId: UNIT_PRICE_ONE_OFF,
       unitPrice: 0.90,
       total: 90.00,
       discount: 10,
@@ -41,7 +45,7 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 250,
-      priceId: "price_1SLKo6Rq8aA0Zjxfbf2F5Dv3",
+      priceId: UNIT_PRICE_ONE_OFF,
       unitPrice: 0.85,
       total: 212.50,
       discount: 15,
@@ -52,21 +56,21 @@ export const PRICING_CONFIG = {
   subscription: [
     {
       quantity: 10,
-      priceId: "price_1SI48PRq8aA0ZjxfQTLnXccX",
+      priceId: UNIT_PRICE_SUBSCRIPTION,
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: "price_1SLKo7Rq8aA0ZjxfzXRVVftu",
+      priceId: UNIT_PRICE_SUBSCRIPTION,
       unitPrice: 1.00,
       total: 25.00,
       discount: 0,
     },
     {
       quantity: 50,
-      priceId: "price_1SLKo8Rq8aA0Zjxf1w3xfiHI",
+      priceId: UNIT_PRICE_SUBSCRIPTION,
       unitPrice: 0.90,
       total: 45.00,
       discount: 10,
@@ -74,14 +78,14 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 100,
-      priceId: "price_1SLKo9Rq8aA0Zjxfwrm6m5LE",
+      priceId: UNIT_PRICE_SUBSCRIPTION,
       unitPrice: 0.85,
       total: 85.00,
       discount: 15,
     },
     {
       quantity: 250,
-      priceId: "price_1SLKoARq8aA0Zjxfx2Ztvvfg",
+      priceId: UNIT_PRICE_SUBSCRIPTION,
       unitPrice: 0.80,
       total: 200.00,
       discount: 20,
