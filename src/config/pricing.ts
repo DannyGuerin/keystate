@@ -16,28 +16,28 @@ export const PRICING_CONFIG = {
   oneOff: [
     {
       quantity: 10,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SNKS1Rq8aA0Zjxf3qz776SY", // £1.00 per unit
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SNKS1Rq8aA0Zjxf3qz776SY", // £1.00 per unit
       unitPrice: 1.00,
       total: 25.00,
       discount: 0,
     },
     {
       quantity: 50,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SNKS1Rq8aA0Zjxf3qz776SY", // £1.00 per unit
       unitPrice: 1.00,
       total: 50.00,
       discount: 0,
     },
     {
       quantity: 100,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SNKS1Rq8aA0Zjxf3qz776SY", // £1.00 per unit
       unitPrice: 0.90,
       total: 90.00,
       discount: 10,
@@ -45,7 +45,7 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 250,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SNKS1Rq8aA0Zjxf3qz776SY", // £1.00 per unit
       unitPrice: 0.85,
       total: 212.50,
       discount: 15,
@@ -56,21 +56,21 @@ export const PRICING_CONFIG = {
   subscription: [
     {
       quantity: 10,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SNKS0Rq8aA0Zjxfz2HSIBbp", // £1.00 per unit per month
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SNKS0Rq8aA0Zjxfz2HSIBbp", // £1.00 per unit per month
       unitPrice: 1.00,
       total: 25.00,
       discount: 0,
     },
     {
       quantity: 50,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SNKS0Rq8aA0Zjxfz2HSIBbp", // £1.00 per unit per month
       unitPrice: 0.90,
       total: 45.00,
       discount: 10,
@@ -78,14 +78,14 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 100,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SNKS0Rq8aA0Zjxfz2HSIBbp", // £1.00 per unit per month
       unitPrice: 0.85,
       total: 85.00,
       discount: 15,
     },
     {
       quantity: 250,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SNKS0Rq8aA0Zjxfz2HSIBbp", // £1.00 per unit per month
       unitPrice: 0.80,
       total: 200.00,
       discount: 20,
