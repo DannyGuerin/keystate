@@ -338,6 +338,7 @@ const Order = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      {/* NO HEADER - Clean order page */}
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
         {/* Company Logo & Details - Centered Hero */}
         <div className="text-center mb-12 space-y-6">
