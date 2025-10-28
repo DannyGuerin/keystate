@@ -41,6 +41,38 @@ serve(async (req) => {
       items 
     } = await req.json();
     
+    // Validate coupon code if provided
+    let couponId = null;
+    let discountPercentage = 0;
+    
+    if (promoCode) {
+      const { data: coupon, error: couponError } = await supabaseClient
+        .from("coupons")
+        .select("*")
+        .eq("code", promoCode)
+        .eq("is_active", true)
+        .single();
+      
+      if (coupon && !couponError) {
+        const now = new Date();
+        const validFrom = new Date(coupon.valid_from);
+        const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
+        
+        if (now >= validFrom && (!validUntil || now <= validUntil)) {
+          if (!coupon.max_uses || coupon.current_uses < coupon.max_uses) {
+            couponId = coupon.id;
+            discountPercentage = coupon.discount_percentage;
+            
+            // Increment usage count
+            await supabaseClient
+              .from("coupons")
+              .update({ current_uses: coupon.current_uses + 1 })
+              .eq("id", coupon.id);
+          }
+        }
+      }
+    }
+    
     logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
     if (!campaignId) throw new Error("Campaign ID is required");
@@ -84,6 +116,7 @@ serve(async (req) => {
         quantity: quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0),
         payment_mode: paymentMode,
         promo_code: promoCode || null,
+        coupon_id: couponId,
         status: "pending_payment" as const,
       }])
       .select()
@@ -121,6 +154,16 @@ serve(async (req) => {
         items: Array.isArray(items) ? JSON.stringify(items.map((i: any) => ({ variantId: i.variantId, quantity: i.quantity }))) : undefined,
       },
     };
+    
+    // Apply discount if coupon is valid
+    if (discountPercentage > 0) {
+      sessionParams.discounts = [{
+        coupon: await stripe.coupons.create({
+          percent_off: discountPercentage,
+          duration: 'once',
+        }).then((c: any) => c.id)
+      }];
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     logStep("Checkout session created", { sessionId: session.id });

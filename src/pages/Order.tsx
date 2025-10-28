@@ -52,6 +52,7 @@ const Order = () => {
   const [phone, setPhone] = useState("");
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
+  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
   
   // Shipping details state - pre-filled from campaign
   const [shippingName, setShippingName] = useState("");
@@ -115,6 +116,77 @@ const Order = () => {
     console.log("Variants query response:", { variantsData, variantsError });
     setVariants(variantsData || []);
     setLoading(false);
+  };
+
+  const validateCoupon = async () => {
+    if (!promoCode.trim()) {
+      toast({
+        title: "Enter a code",
+        description: "Please enter a promo code first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { data: coupon, error } = await supabase
+        .from("coupons")
+        .select("*")
+        .eq("code", promoCode.toUpperCase())
+        .eq("is_active", true)
+        .single();
+
+      if (error || !coupon) {
+        toast({
+          title: "Invalid code",
+          description: "This promo code is not valid",
+          variant: "destructive",
+        });
+        setAppliedCoupon(null);
+        return;
+      }
+
+      const now = new Date();
+      const validFrom = new Date(coupon.valid_from);
+      const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
+
+      if (now < validFrom || (validUntil && now > validUntil)) {
+        toast({
+          title: "Code expired",
+          description: "This promo code is no longer valid",
+          variant: "destructive",
+        });
+        setAppliedCoupon(null);
+        return;
+      }
+
+      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
+        toast({
+          title: "Code limit reached",
+          description: "This promo code has reached its usage limit",
+          variant: "destructive",
+        });
+        setAppliedCoupon(null);
+        return;
+      }
+
+      setAppliedCoupon({
+        code: coupon.code,
+        discount: coupon.discount_percentage,
+      });
+      
+      toast({
+        title: "Code applied!",
+        description: `${coupon.discount_percentage}% discount will be applied at checkout`,
+      });
+    } catch (error) {
+      console.error("Coupon validation error:", error);
+      toast({
+        title: "Validation failed",
+        description: "Could not validate promo code",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSubmit = async () => {
@@ -650,12 +722,44 @@ const Order = () => {
                   {/* Promo Code (Optional) */}
                   <div className="space-y-2">
                     <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-                    <Input
-                      id="promoCode"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      placeholder="Enter promo code"
-                    />
+                    <div className="flex gap-2">
+                      <Input
+                        id="promoCode"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value.toUpperCase());
+                          setAppliedCoupon(null);
+                        }}
+                        placeholder="Enter promo code"
+                        disabled={!!appliedCoupon}
+                      />
+                      {!appliedCoupon ? (
+                        <Button 
+                          type="button" 
+                          onClick={validateCoupon}
+                          variant="outline"
+                          disabled={!promoCode.trim()}
+                        >
+                          Apply
+                        </Button>
+                      ) : (
+                        <Button 
+                          type="button" 
+                          onClick={() => {
+                            setAppliedCoupon(null);
+                            setPromoCode("");
+                          }}
+                          variant="outline"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    {appliedCoupon && (
+                      <p className="text-sm text-green-600 dark:text-green-400">
+                        ✓ {appliedCoupon.discount}% discount applied
+                      </p>
+                    )}
                   </div>
                   
                   <Button

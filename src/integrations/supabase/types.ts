@@ -56,6 +56,45 @@ export type Database = {
         }
         Relationships: []
       }
+      coupons: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          current_uses: number
+          discount_percentage: number
+          id: string
+          is_active: boolean
+          max_uses: number | null
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          discount_percentage: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          current_uses?: number
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean
+          max_uses?: number | null
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       keyring_variants: {
         Row: {
           campaign_id: string
@@ -133,12 +172,59 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          keyring_variant_id: string
+          order_id: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyring_variant_id: string
+          order_id: string
+          quantity: number
+          subtotal: number
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyring_variant_id?: string
+          order_id?: string
+          quantity?: number
+          subtotal?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_keyring_variant_id_fkey"
+            columns: ["keyring_variant_id"]
+            isOneToOne: false
+            referencedRelation: "keyring_variants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           campaign_id: string
+          coupon_id: string | null
           customer_email: string
           customer_name: string
           customer_phone: string | null
+          discount_amount: number | null
           id: string
           keyring_variant_id: string | null
           notes: string | null
@@ -159,9 +245,11 @@ export type Database = {
         }
         Insert: {
           campaign_id: string
+          coupon_id?: string | null
           customer_email: string
           customer_name: string
           customer_phone?: string | null
+          discount_amount?: number | null
           id?: string
           keyring_variant_id?: string | null
           notes?: string | null
@@ -182,9 +270,11 @@ export type Database = {
         }
         Update: {
           campaign_id?: string
+          coupon_id?: string | null
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
+          discount_amount?: number | null
           id?: string
           keyring_variant_id?: string | null
           notes?: string | null
@@ -209,6 +299,13 @@ export type Database = {
             columns: ["campaign_id"]
             isOneToOne: false
             referencedRelation: "campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_coupon_id_fkey"
+            columns: ["coupon_id"]
+            isOneToOne: false
+            referencedRelation: "coupons"
             referencedColumns: ["id"]
           },
           {

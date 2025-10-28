@@ -9,6 +9,7 @@ import ThankYou from "./pages/ThankYou";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import AdminCampaigns from "./pages/AdminCampaigns";
+import AdminCoupons from "./pages/AdminCoupons";
 import CampaignBuilder from "./pages/CampaignBuilder";
 import Order from "./pages/Order";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/admin/campaigns" element={<AdminCampaigns />} />
+          <Route path="/admin/coupons" element={<AdminCoupons />} />
           <Route path="/admin/campaigns/new" element={<CampaignBuilder />} />
           <Route path="/admin/campaigns/:id" element={<CampaignBuilder />} />
           <Route path="/order/:code" element={<Order />} />
