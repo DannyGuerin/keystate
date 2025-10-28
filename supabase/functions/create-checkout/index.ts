@@ -138,7 +138,7 @@ serve(async (req) => {
 
     const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
 
-    // Calculate if we need to apply volume discount based on quantity
+    // Calculate total discount: combine volume discount + promo code discount
     // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
     // For one-off: 100+ gets 10%, 250+ gets 15%
     let volumeDiscountPercent = 0;
@@ -150,6 +150,9 @@ serve(async (req) => {
       if (totalQty >= 250) volumeDiscountPercent = 15;
       else if (totalQty >= 100) volumeDiscountPercent = 10;
     }
+
+    // Combine volume discount with promo code discount (if both exist, use the higher one or add them)
+    const totalDiscountPercent = Math.min(100, volumeDiscountPercent + discountPercentage);
 
     const sessionParams: any = {
       line_items: lineItems,
@@ -168,29 +171,14 @@ serve(async (req) => {
       },
     };
     
-    // Apply volume discount first if applicable
-    const couponsToApply = [];
-    if (volumeDiscountPercent > 0) {
-      const volumeCoupon = await stripe.coupons.create({
-        percent_off: volumeDiscountPercent,
+    // Apply combined discount if any discount exists (Stripe only allows 1 discount per session)
+    if (totalDiscountPercent > 0) {
+      const coupon = await stripe.coupons.create({
+        percent_off: totalDiscountPercent,
         duration: paymentMode === "subscription" ? 'forever' : 'once',
-        name: `Volume Discount ${volumeDiscountPercent}%`,
+        name: `Combined Discount ${totalDiscountPercent}%`,
       });
-      couponsToApply.push({ coupon: volumeCoupon.id });
-    }
-    
-    // Apply promo code discount if valid (stacks with volume discount)
-    if (discountPercentage > 0) {
-      const promoCoupon = await stripe.coupons.create({
-        percent_off: discountPercentage,
-        duration: 'once',
-        name: `Promo Code ${discountPercentage}%`,
-      });
-      couponsToApply.push({ coupon: promoCoupon.id });
-    }
-    
-    if (couponsToApply.length > 0) {
-      sessionParams.discounts = couponsToApply;
+      sessionParams.discounts = [{ coupon: coupon.id }];
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
