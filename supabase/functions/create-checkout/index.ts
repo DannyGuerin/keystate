@@ -14,8 +14,8 @@ const logStep = (step: string, details?: any) => {
 // Variant-based pricing map (variantId → Stripe Price ID)
 // Using actual keyring_variants UUIDs from database
 const PRICE_MAP: Record<string, string> = {
-  '2cf7245c-4440-405c-9d34-a8eb47ce902a': 'price_test_black_123',      // Classic Rectangle White/Green
-  '74af0c59-6323-46aa-a5bf-0e2e9fa6193f': 'price_test_premium_456',   // Classic Rectangle White/Green
+  '2cf7245c-4440-405c-9d34-a8eb47ce902a': 'price_1SNXEzRq8aA0ZjxfXvNN1fQr',      // Classic Rectangle White/Green - £9.99
+  '74af0c59-6323-46aa-a5bf-0e2e9fa6193f': 'price_1SNXF0Rq8aA0ZjxfJKGj7bmg',   // Premium Rectangle - £14.99
 };
 
 // Type definitions for request payload
