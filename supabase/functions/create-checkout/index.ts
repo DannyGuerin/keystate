@@ -109,7 +109,7 @@ serve(async (req) => {
 
     logStep("Server-enforced pricing", { priceForMode, totalQty });
 
-    // Calculate if we need to apply volume discount based on quantity
+    // Calculate volume discount based on quantity
     // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
     // For one-off: 100+ gets 10%, 250+ gets 15%
     let volumeDiscountPercent = 0;
@@ -139,7 +139,16 @@ serve(async (req) => {
       },
     };
     
-    // No discounts applied (coupon/promo/volume removed per requirement)
+    // Apply volume discount if applicable
+    if (volumeDiscountPercent > 0) {
+      const volumeCoupon = await stripe.coupons.create({
+        percent_off: volumeDiscountPercent,
+        duration: paymentMode === "subscription" ? 'forever' : 'once',
+        name: `Volume Discount ${volumeDiscountPercent}%`,
+      });
+      sessionParams.discounts = [{ coupon: volumeCoupon.id }];
+      logStep("Volume discount applied", { volumeDiscountPercent, couponId: volumeCoupon.id });
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     logStep("Checkout session created", { sessionId: session.id });
