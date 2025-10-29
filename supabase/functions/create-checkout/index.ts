@@ -161,11 +161,13 @@ serve(async (req) => {
     // Combine volume discount with promo code discount (if both exist, use the higher one or add them)
     const totalDiscountPercent = Math.min(100, volumeDiscountPercent + discountPercentage);
 
-    const sessionParams: any = {
+const origin = req.headers.get("origin") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "http://localhost:5173";
+
+const sessionParams: any = {
       line_items: lineItems,
       mode: paymentMode === "subscription" ? "subscription" : "payment",
-      success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
+      success_url: `${origin}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/order/${campaign.unique_code || ''}`,
       customer_email: order.customer_email,
       shipping_address_collection: {
         allowed_countries: ["GB", "US", "CA", "AU", "IE"],
