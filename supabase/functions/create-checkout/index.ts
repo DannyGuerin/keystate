@@ -37,41 +37,8 @@ serve(async (req) => {
       quantity, 
       paymentMode, 
       priceId,
-      promoCode,
       items 
     } = await req.json();
-    
-    // Validate coupon code if provided
-    let couponId = null;
-    let discountPercentage = 0;
-    
-    if (promoCode) {
-      const { data: coupon, error: couponError } = await supabaseClient
-        .from("coupons")
-        .select("*")
-        .eq("code", promoCode)
-        .eq("is_active", true)
-        .single();
-      
-      if (coupon && !couponError) {
-        const now = new Date();
-        const validFrom = new Date(coupon.valid_from);
-        const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
-        
-        if (now >= validFrom && (!validUntil || now <= validUntil)) {
-          if (!coupon.max_uses || coupon.current_uses < coupon.max_uses) {
-            couponId = coupon.id;
-            discountPercentage = coupon.discount_percentage;
-            
-            // Increment usage count
-            await supabaseClient
-              .from("coupons")
-              .update({ current_uses: coupon.current_uses + 1 })
-              .eq("id", coupon.id);
-          }
-        }
-      }
-    }
     
     logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
@@ -115,8 +82,6 @@ serve(async (req) => {
         customer_phone: customerPhone || null,
         quantity: quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0),
         payment_mode: paymentMode,
-        promo_code: promoCode || null,
-        coupon_id: couponId,
         status: "pending_payment" as const,
       }])
       .select()
@@ -168,29 +133,14 @@ serve(async (req) => {
       },
     };
     
-    // Apply volume discount first if applicable
-    const couponsToApply = [];
+    // Apply volume discount if applicable
     if (volumeDiscountPercent > 0) {
       const volumeCoupon = await stripe.coupons.create({
         percent_off: volumeDiscountPercent,
         duration: paymentMode === "subscription" ? 'forever' : 'once',
         name: `Volume Discount ${volumeDiscountPercent}%`,
       });
-      couponsToApply.push({ coupon: volumeCoupon.id });
-    }
-    
-    // Apply promo code discount if valid (stacks with volume discount)
-    if (discountPercentage > 0) {
-      const promoCoupon = await stripe.coupons.create({
-        percent_off: discountPercentage,
-        duration: 'once',
-        name: `Promo Code ${discountPercentage}%`,
-      });
-      couponsToApply.push({ coupon: promoCoupon.id });
-    }
-    
-    if (couponsToApply.length > 0) {
-      sessionParams.discounts = couponsToApply;
+      sessionParams.discounts = [{ coupon: volumeCoupon.id }];
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
