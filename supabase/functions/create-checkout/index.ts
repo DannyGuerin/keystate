@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started");
+    logStep("Function started v3");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -40,7 +40,7 @@ serve(async (req) => {
       items 
     } = await req.json();
     
-    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
+    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId, itemsType: Array.isArray(items) ? typeof items : typeof items, itemsLength: Array.isArray(items) ? items.length : 0 });
 
     if (!campaignId) throw new Error("Campaign ID is required");
     if (!customerName) throw new Error("Customer name is required");
@@ -108,10 +108,16 @@ serve(async (req) => {
       aggregatedMap.set(li.price, (aggregatedMap.get(li.price) || 0) + li.quantity);
     }
     const lineItems = Array.from(aggregatedMap.entries()).map(([price, qty]) => ({ price, quantity: qty }));
+    // After aggregation, ensure a single subscription line item to avoid Stripe duplicate recurring price errors
+    let finalLineItems = lineItems;
+    if (paymentMode === "subscription" && finalLineItems.length > 1) {
+      const totalQ = finalLineItems.reduce((s: number, li: any) => s + Number(li.quantity || 0), 0);
+      const firstPrice = finalLineItems[0].price;
+      finalLineItems = [{ price: firstPrice, quantity: totalQ }];
+      logStep("Consolidated subscription line items", { finalLineItems });
+    }
 
-    logStep("Line items aggregated", { lineItems });
-
-    const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
+    const totalQty = finalLineItems.reduce((s: number, li: any) => s + Number(li.quantity || 0), 0);
 
     // Calculate if we need to apply volume discount based on quantity
     // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
@@ -127,7 +133,7 @@ serve(async (req) => {
     }
 
     const sessionParams: any = {
-      line_items: lineItems,
+      line_items: finalLineItems,
       mode: paymentMode === "subscription" ? "subscription" : "payment",
       success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,

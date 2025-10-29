@@ -204,13 +204,22 @@ const Order = () => {
     try {
       // Build line items per selected variant based on individual quantities
       const entries = Object.entries(selectedVariants);
-      const items = entries.map(([variantId, qty]) => {
+      let items = entries.map(([variantId, qty]) => {
         const tier = getPricingTier(qty, paymentMode);
         if (!tier) {
           throw new Error("INVALID_TIER");
         }
         return { variantId, quantity: qty, priceId: tier.priceId };
       });
+
+      // To avoid Stripe's duplicate recurring price restriction, collapse to a single subscription line item
+      if (paymentMode === "subscription" && items.length > 1) {
+        const totalQ = items.reduce((s, i) => s + Number(i.quantity || 0), 0);
+        const firstPriceId = items[0].priceId;
+        const firstVariantId = entries[0][0];
+        items = [{ variantId: firstVariantId, quantity: totalQ, priceId: firstPriceId }];
+        console.log("Collapsed subscription items to one line item:", items);
+      }
 
       const totalQuantity = entries.reduce((sum, [, qty]) => sum + qty, 0);
       const firstVariantId = entries[0][0];
