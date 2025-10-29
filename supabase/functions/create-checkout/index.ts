@@ -12,23 +12,29 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
-// Server-side pricing tiers (must match frontend)
-const PRICING_TIERS = {
-  oneOff: {
-    10: "price_1SHrNsRq8aA0ZjxfeOJ39fxH",
-    25: "price_1SI3ybRq8aA0ZjxfQj3IVd8e",
-    50: "price_1SI42ARq8aA0ZjxfcR3R3BTe",
-    100: "price_1SI44eRq8aA0ZjxfJGTQ42dq",
-    250: "price_1SI469Rq8aA0ZjxffupuxZy3",
-  },
-  subscription: {
-    10: "price_1SI48PRq8aA0ZjxfQTLnXccX",
-    25: "price_1SI4B2Rq8aA0ZjxfmMopzAjy",
-    50: "price_1SI4CURq8aA0ZjxfbDP2zWQG",
-    100: "price_1SI4EXRq8aA0ZjxfqnMDKfKy",
-    250: "price_1SI4GERq8aA0ZjxfY3jwm7Fd",
-  }
-} as const;
+// Variant-based pricing map (variantId -> Stripe Price ID)
+// TODO: Populate with actual variant IDs and their corresponding price IDs
+const PRICE_MAP: Record<string, string> = {
+  // Example format:
+  // 'variant-uuid-here': 'price_1SHrNsRq8aA0ZjxfeOJ39fxH',
+  // Add your keyring variant IDs and their Stripe price IDs below
+};
+
+// Type definitions for request payload
+type CheckoutItem = {
+  variantId: string;
+  quantity: number;
+};
+
+type CheckoutPayload = {
+  items: CheckoutItem[];
+  mode?: 'payment' | 'subscription';
+  promoCode?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string;
+  campaignId: string;
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -67,100 +73,116 @@ serve(async (req) => {
     const body = await req.json();
     logStep("Parsed body", body);
 
-    const { 
-      campaignId, 
-      variantId, 
-      customerName, 
-      customerEmail, 
-      customerPhone,
-      quantity, 
-      paymentMode, 
-      priceId,
-      promoCode 
-    } = body;
-    
-    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
+    const payload = body as CheckoutPayload;
 
-    if (!campaignId) throw new Error("Campaign ID is required");
-    if (!variantId) throw new Error("Variant ID is required");
-    if (!customerName) throw new Error("Customer name is required");
-    if (!customerEmail) throw new Error("Customer email is required");
-    if (!quantity) throw new Error("Quantity is required");
-
-    // SERVER-SIDE VALIDATION: Verify quantity is a valid tier
-    const validQuantities = [10, 25, 50, 100, 250];
-    if (!validQuantities.includes(quantity)) {
-      logStep("Invalid quantity - returning 400", { quantity, validQuantities });
+    // VALIDATION: Check required fields
+    if (!payload.customerName) {
       return new Response(
-        JSON.stringify({ 
-          error: `Invalid quantity: ${quantity}. Must be one of: ${validQuantities.join(', ')}` 
-        }), 
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 400,
-        }
+        JSON.stringify({ error: "customerName is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    if (!payload.customerEmail) {
+      return new Response(
+        JSON.stringify({ error: "customerEmail is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+      );
+    }
+    if (!payload.campaignId) {
+      return new Response(
+        JSON.stringify({ error: "campaignId is required" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    // SERVER-SIDE VALIDATION: Get correct price ID from server config
-    const mode = paymentMode === "subscription" ? "subscription" : "oneOff";
-    const tierConfig = PRICING_TIERS[mode];
-    const correctPriceId = tierConfig[quantity as keyof typeof tierConfig];
-
-    if (!correctPriceId) {
-      logStep("No price configured for tier", { quantity, mode });
+    // VALIDATION: Items array must be non-empty
+    if (!Array.isArray(payload.items) || payload.items.length === 0) {
+      logStep("Invalid items - returning 400", { items: payload.items });
       return new Response(
-        JSON.stringify({ 
-          error: `No price configured for ${quantity} units in ${mode} mode` 
-        }), 
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 500,
-        }
+        JSON.stringify({ error: "items array must be non-empty" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
       );
     }
 
-    // SERVER-SIDE VALIDATION: Check if client sent a price ID
-    if (priceId) {
-      if (priceId !== correctPriceId) {
-        logStep("Price ID mismatch - using server price", { 
-          clientSent: priceId, 
-          serverExpected: correctPriceId,
-          quantity,
-          mode
-        });
+    // VALIDATION: Validate each item
+    const validatedLineItems: Array<{ price: string; quantity: number }> = [];
+    let totalQuantity = 0;
+
+    for (const item of payload.items) {
+      // Check variantId exists
+      if (!item.variantId || typeof item.variantId !== 'string') {
+        return new Response(
+          JSON.stringify({ error: "Each item must have a valid variantId" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
       }
-    } else {
-      logStep("Client omitted priceId - using server price", { quantity, mode });
+
+      // Check variantId exists in PRICE_MAP
+      const priceId = PRICE_MAP[item.variantId];
+      if (!priceId) {
+        logStep("Invalid variantId - returning 400", { variantId: item.variantId });
+        return new Response(
+          JSON.stringify({ 
+            error: `Unknown variantId: ${item.variantId}. This variant is not configured for checkout.` 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+
+      // Check quantity is valid (integer >= 1, capped at 50)
+      if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 50) {
+        logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: item.quantity });
+        return new Response(
+          JSON.stringify({ 
+            error: `Quantity must be an integer between 1 and 50. Got: ${item.quantity}` 
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
+        );
+      }
+
+      validatedLineItems.push({
+        price: priceId,
+        quantity: item.quantity,
+      });
+
+      totalQuantity += item.quantity;
     }
 
-    const validatedPriceId = correctPriceId;
-    logStep("Price validated", { priceId: validatedPriceId, quantity, mode });
+    const mode = payload.mode || 'payment';
+    logStep("Validation complete", { 
+      itemCount: validatedLineItems.length, 
+      totalQuantity,
+      mode 
+    });
 
     // Fetch campaign details for checkout metadata
     const { data: campaign, error: campaignError } = await supabaseClient
       .from("campaigns")
       .select("company_name, unique_code")
-      .eq("id", campaignId)
+      .eq("id", payload.campaignId)
       .single();
 
     if (campaignError || !campaign) {
       logStep("Campaign fetch error", campaignError);
-      throw new Error("Campaign not found");
+      return new Response(
+        JSON.stringify({ error: "Campaign not found" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 }
+      );
     }
 
-    // Create order record
+    // Create order record (using first item for now - multi-item support can be added later)
+    const firstItem = payload.items[0];
     const { data: order, error: orderError } = await supabaseClient
       .from("orders")
       .insert([{
-        campaign_id: campaignId,
-        keyring_variant_id: variantId,
-        customer_name: customerName,
-        customer_email: customerEmail,
-        customer_phone: customerPhone || null,
-        quantity: quantity,
-        payment_mode: paymentMode,
-        promo_code: promoCode || null,
+        campaign_id: payload.campaignId,
+        keyring_variant_id: firstItem.variantId,
+        customer_name: payload.customerName,
+        customer_email: payload.customerEmail,
+        customer_phone: payload.customerPhone || null,
+        quantity: totalQuantity,
+        payment_mode: mode as 'payment' | 'subscription',
+        promo_code: payload.promoCode || null,
         status: "pending_payment" as const,
       }])
       .select()
@@ -168,33 +190,31 @@ serve(async (req) => {
 
     if (orderError || !order) {
       logStep("Order creation error", orderError);
-      throw new Error("Failed to create order");
+      return new Response(
+        JSON.stringify({ error: "Failed to create order" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
     }
 
-    logStep("Order created", { orderId: order.id, quantity: order.quantity });
+    logStep("Order created", { orderId: order.id, totalQuantity });
 
-    logStep("About to call Stripe", { priceId: validatedPriceId, mode: paymentMode });
+    logStep("About to call Stripe", { lineItems: validatedLineItems, mode });
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session using the VALIDATED Price ID
-    const sessionParams: any = {
-      line_items: [
-        {
-          price: validatedPriceId, // Use server-validated price ID
-          quantity: 1, // Always 1 (tier price includes all units)
-        },
-      ],
-      mode: paymentMode === "subscription" ? "subscription" : "payment",
+    // Create Stripe checkout session
+    const sessionParams: Stripe.Checkout.SessionCreateParams = {
+      line_items: validatedLineItems,
+      mode: mode === 'subscription' ? 'subscription' : 'payment',
       success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
-      customer_email: order.customer_email,
+      customer_email: payload.customerEmail,
       shipping_address_collection: {
         allowed_countries: ["GB", "US", "CA", "AU", "IE"],
       },
       metadata: {
         order_id: order.id,
-        quantity: quantity,
-        payment_mode: paymentMode,
+        total_quantity: totalQuantity.toString(),
+        payment_mode: mode,
       },
     };
 
