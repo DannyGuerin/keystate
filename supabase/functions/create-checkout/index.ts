@@ -41,8 +41,6 @@ serve(async (req) => {
       items 
     } = await req.json();
     
-    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId, items, itemsType: typeof items, itemsLength: items?.length });
-    
     // Validate coupon code if provided
     let couponId = null;
     let discountPercentage = 0;
@@ -75,7 +73,7 @@ serve(async (req) => {
       }
     }
     
-    
+    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
     if (!campaignId) throw new Error("Campaign ID is required");
     if (!customerName) throw new Error("Customer name is required");
@@ -135,17 +133,12 @@ serve(async (req) => {
 
     // Create Stripe checkout session supporting multi-variant line items
     const lineItems = Array.isArray(items) && items.length > 0
-      ? items.map((i: any) => {
-          logStep("Line item created", { priceId: i.priceId, quantity: i.quantity });
-          return { price: i.priceId, quantity: i.quantity };
-        })
+      ? items.map((i: any) => ({ price: i.priceId, quantity: i.quantity }))
       : [{ price: priceId, quantity: quantity }];
-    
-    logStep("All line items", { lineItems, hasItems: Array.isArray(items) && items.length > 0 });
 
     const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
 
-    // Calculate total discount: combine volume discount + promo code discount
+    // Calculate if we need to apply volume discount based on quantity
     // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
     // For one-off: 100+ gets 10%, 250+ gets 15%
     let volumeDiscountPercent = 0;
@@ -158,16 +151,11 @@ serve(async (req) => {
       else if (totalQty >= 100) volumeDiscountPercent = 10;
     }
 
-    // Combine volume discount with promo code discount (if both exist, use the higher one or add them)
-    const totalDiscountPercent = Math.min(100, volumeDiscountPercent + discountPercentage);
-
-const origin = req.headers.get("origin") || Deno.env.get("VITE_PUBLIC_SITE_URL") || "http://localhost:5173";
-
-const sessionParams: any = {
+    const sessionParams: any = {
       line_items: lineItems,
       mode: paymentMode === "subscription" ? "subscription" : "payment",
-      success_url: `${origin}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${origin}/order/${campaign.unique_code || ''}`,
+      success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
       customer_email: order.customer_email,
       shipping_address_collection: {
         allowed_countries: ["GB", "US", "CA", "AU", "IE"],
@@ -180,14 +168,29 @@ const sessionParams: any = {
       },
     };
     
-    // Apply combined discount if any discount exists (Stripe only allows 1 discount per session)
-    if (totalDiscountPercent > 0) {
-      const coupon = await stripe.coupons.create({
-        percent_off: totalDiscountPercent,
+    // Apply volume discount first if applicable
+    const couponsToApply = [];
+    if (volumeDiscountPercent > 0) {
+      const volumeCoupon = await stripe.coupons.create({
+        percent_off: volumeDiscountPercent,
         duration: paymentMode === "subscription" ? 'forever' : 'once',
-        name: `Combined Discount ${totalDiscountPercent}%`,
+        name: `Volume Discount ${volumeDiscountPercent}%`,
       });
-      sessionParams.discounts = [{ coupon: coupon.id }];
+      couponsToApply.push({ coupon: volumeCoupon.id });
+    }
+    
+    // Apply promo code discount if valid (stacks with volume discount)
+    if (discountPercentage > 0) {
+      const promoCoupon = await stripe.coupons.create({
+        percent_off: discountPercentage,
+        duration: 'once',
+        name: `Promo Code ${discountPercentage}%`,
+      });
+      couponsToApply.push({ coupon: promoCoupon.id });
+    }
+    
+    if (couponsToApply.length > 0) {
+      sessionParams.discounts = couponsToApply;
     }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
