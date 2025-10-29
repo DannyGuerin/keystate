@@ -130,24 +130,11 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // Get the appropriate Stripe Price ID
-      const pricingTier = getPricingTier(quantity, paymentMode);
-      if (!pricingTier) {
-        toast({
-          title: "Invalid selection",
-          description: "Please select a valid quantity",
-          variant: "destructive",
-        });
-        setSubmitting(false);
-        return;
-      }
-
       console.log("Creating checkout session with:", {
         campaignId: campaign.id,
         variantId: selectedVariant,
         quantity,
         paymentMode,
-        priceId: pricingTier.priceId,
       });
 
       // Create order and checkout session via edge function
@@ -155,14 +142,12 @@ const Order = () => {
         "create-checkout",
         {
           body: {
-            campaignId: campaign.id,
-            variantId: selectedVariant,
+            items: [{ variantId: selectedVariant, quantity }],
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
-            quantity: quantity,
-            paymentMode: paymentMode,
-            priceId: pricingTier.priceId,
+            campaignId: campaign.id,
+            mode: paymentMode === 'one-off' ? 'payment' : 'subscription',
             promoCode: promoCode || null,
           },
         }
@@ -212,21 +197,8 @@ const Order = () => {
         description: "Please wait while we redirect you to Stripe",
       });
 
-      // Set a timeout to warn if redirect takes too long
-      const timeoutId = setTimeout(() => {
-        console.warn("Stripe checkout is taking longer than expected");
-        toast({
-          title: "Loading...",
-          description: "If this takes too long, please check your connection",
-          variant: "default",
-        });
-      }, 5000);
-
       // Redirect to Stripe Checkout
       window.location.href = checkoutData.url;
-      
-      // Clear timeout if redirect happens quickly
-      clearTimeout(timeoutId);
     } catch (error) {
       console.error("Unexpected error during checkout:", error);
       toast({
