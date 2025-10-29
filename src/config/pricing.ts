@@ -8,47 +8,43 @@ export interface PricingTier {
   isBestValue?: boolean;
 }
 
-// Base unit prices - Stripe will multiply by quantity
-const UNIT_PRICE_ONE_OFF = "price_1SNKS1Rq8aA0Zjxf3qz776SY"; // £1.00 per unit
-const UNIT_PRICE_SUBSCRIPTION = "price_1SNKS0Rq8aA0Zjxfz2HSIBbp"; // £1.00 per unit per month
-
 export const PRICING_CONFIG = {
   oneOff: [
     {
       quantity: 10,
-      priceId: UNIT_PRICE_ONE_OFF,
+      priceId: "price_1SHrNsRq8aA0ZjxfeOJ39fxH",
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: UNIT_PRICE_ONE_OFF,
-      unitPrice: 1.00,
-      total: 25.00,
-      discount: 0,
-    },
-    {
-      quantity: 50,
-      priceId: UNIT_PRICE_ONE_OFF,
-      unitPrice: 1.00,
-      total: 50.00,
-      discount: 0,
-    },
-    {
-      quantity: 100,
-      priceId: UNIT_PRICE_ONE_OFF,
-      unitPrice: 0.90,
-      total: 90.00,
-      discount: 10,
+      priceId: "price_1SI3ybRq8aA0ZjxfQj3IVd8e",
+      unitPrice: 0.95,
+      total: 23.75,
+      discount: 5,
       isPopular: true,
     },
     {
-      quantity: 250,
-      priceId: UNIT_PRICE_ONE_OFF,
+      quantity: 50,
+      priceId: "price_1SI42ARq8aA0ZjxfcR3R3BTe",
+      unitPrice: 0.90,
+      total: 45.00,
+      discount: 10,
+    },
+    {
+      quantity: 100,
+      priceId: "price_1SI44eRq8aA0ZjxfJGTQ42dq",
       unitPrice: 0.85,
-      total: 212.50,
+      total: 85.00,
       discount: 15,
+    },
+    {
+      quantity: 250,
+      priceId: "price_1SI469Rq8aA0ZjxffupuxZy3",
+      unitPrice: 0.80,
+      total: 200.00,
+      discount: 20,
       isBestValue: true,
     },
   ] as PricingTier[],
@@ -56,39 +52,39 @@ export const PRICING_CONFIG = {
   subscription: [
     {
       quantity: 10,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
+      priceId: "price_1SI48PRq8aA0ZjxfQTLnXccX",
       unitPrice: 1.00,
       total: 10.00,
-      discount: 0,
+      discount: 0, // no savings vs one-off
     },
     {
       quantity: 25,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
-      unitPrice: 1.00,
-      total: 25.00,
-      discount: 0,
-    },
-    {
-      quantity: 50,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
-      unitPrice: 0.90,
-      total: 45.00,
-      discount: 10,
+      priceId: "price_1SI4B2Rq8aA0ZjxfmMopzAjy",
+      unitPrice: 0.88,
+      total: 22.00,
+      discount: 7,
       isPopular: true,
     },
     {
+      quantity: 50,
+      priceId: "price_1SI4CURq8aA0ZjxfbDP2zWQG",
+      unitPrice: 0.80,
+      total: 40.00,
+      discount: 11,
+    },
+    {
       quantity: 100,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
-      unitPrice: 0.85,
-      total: 85.00,
-      discount: 15,
+      priceId: "price_1SI4EXRq8aA0ZjxfqnMDKfKy",
+      unitPrice: 0.75,
+      total: 75.00,
+      discount: 12,
     },
     {
       quantity: 250,
-      priceId: UNIT_PRICE_SUBSCRIPTION,
-      unitPrice: 0.80,
-      total: 200.00,
-      discount: 20,
+      priceId: "price_1SI4GERq8aA0ZjxfY3jwm7Fd",
+      unitPrice: 0.72,
+      total: 180.00,
+      discount: 10,
       isBestValue: true,
     },
   ] as PricingTier[],

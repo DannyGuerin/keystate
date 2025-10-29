@@ -1,16 +1,10 @@
 export const getPublicBaseUrl = (): string => {
-  // Prefer env if provided at build time
+  // Check if VITE_PUBLIC_SITE_URL is set in environment
   const envUrl = import.meta.env.VITE_PUBLIC_SITE_URL;
-  if (envUrl && typeof envUrl === 'string') {
+  if (envUrl) {
     return envUrl.replace(/\/$/, ''); // Remove trailing slash
   }
-
-  // If on Lovable preview/staging, use the live public domain
-  const host = typeof window !== 'undefined' ? window.location.host : '';
-  if (host.includes('lovableproject.com')) {
-    return 'https://getkeystate.com';
-  }
-
+  
   // Fallback: Use current origin (works when already on public site)
-  return typeof window !== 'undefined' ? window.location.origin : '';
+  return window.location.origin;
 };

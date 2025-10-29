@@ -78,12 +78,12 @@ serve(async (req) => {
       .from("orders")
       .select(`
         *,
+        keyring_variants (
+          type,
+          color
+        ),
         campaigns (
           company_name
-        ),
-        coupons (
-          code,
-          discount_percentage
         )
       `)
       .eq("id", orderId)

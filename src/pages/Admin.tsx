@@ -92,9 +92,6 @@ const Admin = () => {
             <Button onClick={() => navigate("/admin/campaigns")}>
               Manage Campaigns
             </Button>
-            <Button variant="outline" onClick={() => navigate("/admin/coupons")}>
-              Manage Coupons
-            </Button>
             <Button variant="outline" onClick={signOut}>
               Logout
             </Button>

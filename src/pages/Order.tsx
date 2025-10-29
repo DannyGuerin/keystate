@@ -15,7 +15,6 @@ import { OrderSummary } from "@/components/OrderSummary";
 import { Loader2 } from "lucide-react";
 import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
 
-
 interface Campaign {
   id: string;
   company_name: string;
@@ -46,20 +45,20 @@ const Order = () => {
 
   // Form state
   const [step, setStep] = useState(1);
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, number>>({});
+  const [selectedVariant, setSelectedVariant] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [quantity, setQuantity] = useState(25);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
-  const [appliedCoupon, setAppliedCoupon] = useState<{code: string, discount: number} | null>(null);
   
   // Shipping details state - pre-filled from campaign
   const [shippingName, setShippingName] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingPostcode, setShippingPostcode] = useState("");
   const [shippingContact, setShippingContact] = useState("");
-  const [detailsConfirmed, setDetailsConfirmed] = useState(false);
+  const [detailsEditing, setDetailsEditing] = useState(false);
 
   useEffect(() => {
     if (code) {
@@ -69,11 +68,11 @@ const Order = () => {
 
   // Auto-select when only one variant is available
   useEffect(() => {
-    if (variants.length === 1 && Object.keys(selectedVariants).length === 0) {
-      setSelectedVariants({ [variants[0].id]: 25 });
+    if (variants.length === 1 && !selectedVariant) {
+      setSelectedVariant(variants[0].id);
       if (step === 1) setStep(2);
     }
-  }, [variants, selectedVariants, step]);
+  }, [variants, selectedVariant, step]);
 
   const fetchCampaign = async () => {
     console.log("Fetching campaign with code:", code);
@@ -118,82 +117,11 @@ const Order = () => {
     setLoading(false);
   };
 
-  const validateCoupon = async () => {
-    if (!promoCode.trim()) {
-      toast({
-        title: "Enter a code",
-        description: "Please enter a promo code first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const { data: coupon, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", promoCode.toUpperCase())
-        .eq("is_active", true)
-        .single();
-
-      if (error || !coupon) {
-        toast({
-          title: "Invalid code",
-          description: "This promo code is not valid",
-          variant: "destructive",
-        });
-        setAppliedCoupon(null);
-        return;
-      }
-
-      const now = new Date();
-      const validFrom = new Date(coupon.valid_from);
-      const validUntil = coupon.valid_until ? new Date(coupon.valid_until) : null;
-
-      if (now < validFrom || (validUntil && now > validUntil)) {
-        toast({
-          title: "Code expired",
-          description: "This promo code is no longer valid",
-          variant: "destructive",
-        });
-        setAppliedCoupon(null);
-        return;
-      }
-
-      if (coupon.max_uses && coupon.current_uses >= coupon.max_uses) {
-        toast({
-          title: "Code limit reached",
-          description: "This promo code has reached its usage limit",
-          variant: "destructive",
-        });
-        setAppliedCoupon(null);
-        return;
-      }
-
-      setAppliedCoupon({
-        code: coupon.code,
-        discount: coupon.discount_percentage,
-      });
-      
-      toast({
-        title: "Code applied!",
-        description: `${coupon.discount_percentage}% discount will be applied at checkout`,
-      });
-    } catch (error) {
-      console.error("Coupon validation error:", error);
-      toast({
-        title: "Validation failed",
-        description: "Could not validate promo code",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!campaign || Object.keys(selectedVariants).length === 0 || !name || !email) {
+    if (!campaign || !selectedVariant || !name || !email || !quantity) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields and select at least one variant",
+        description: "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -202,50 +130,40 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // Build line items per selected variant based on individual quantities
-      const entries = Object.entries(selectedVariants);
-      let items = entries.map(([variantId, qty]) => {
-        const tier = getPricingTier(qty, paymentMode);
-        if (!tier) {
-          throw new Error("INVALID_TIER");
-        }
-        return { variantId, quantity: qty, priceId: tier.priceId };
-      });
-
-      // To avoid Stripe's duplicate recurring price restriction, collapse to a single subscription line item
-      if (paymentMode === "subscription" && items.length > 1) {
-        const totalQ = items.reduce((s, i) => s + Number(i.quantity || 0), 0);
-        const firstPriceId = items[0].priceId;
-        const firstVariantId = entries[0][0];
-        items = [{ variantId: firstVariantId, quantity: totalQ, priceId: firstPriceId }];
-        console.log("Collapsed subscription items to one line item:", items);
+      // Get the appropriate Stripe Price ID
+      const pricingTier = getPricingTier(quantity, paymentMode);
+      if (!pricingTier) {
+        toast({
+          title: "Invalid selection",
+          description: "Please select a valid quantity",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
       }
 
-      const totalQuantity = entries.reduce((sum, [, qty]) => sum + qty, 0);
-      const firstVariantId = entries[0][0];
-
-      console.log("Creating checkout session with (multi-variant):", {
+      console.log("Creating checkout session with:", {
         campaignId: campaign.id,
-        firstVariantId,
-        totalQuantity,
+        variantId: selectedVariant,
+        quantity,
         paymentMode,
-        items,
-        itemsPriceIds: items.map(i => i.priceId),
+        priceId: pricingTier.priceId,
       });
 
+      // Create order and checkout session via edge function
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
         "create-checkout",
         {
           body: {
             campaignId: campaign.id,
-            variantId: firstVariantId, // kept for order linkage
+            variantId: selectedVariant,
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
-            quantity: totalQuantity,
-            paymentMode,
+            quantity: quantity,
+            paymentMode: paymentMode,
+            priceId: pricingTier.priceId,
             promoCode: promoCode || null,
-            items,
           },
         }
       );
@@ -297,19 +215,11 @@ const Order = () => {
       clearTimeout(timeoutId);
     } catch (error) {
       console.error("Unexpected error during checkout:", error);
-      if (error instanceof Error && error.message === "INVALID_TIER") {
-        toast({
-          title: "Invalid selection",
-          description: "Please select a valid quantity for each variant",
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Checkout failed",
-          description: "An unexpected error occurred. Please try again.",
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Checkout failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
       setSubmitting(false);
     }
   };
@@ -335,44 +245,50 @@ const Order = () => {
     );
   }
 
-  // Get variants with quantities for OrderSummary
-  const selectedVariantItems = Object.keys(selectedVariants).map(variantId => {
-    const variant = variants.find(v => v.id === variantId);
-    return variant ? {
-      id: variant.id,
-      type: variant.type,
-      color: variant.color,
-      quantity: selectedVariants[variantId]
-    } : null;
-  }).filter(Boolean) as Array<{id: string; type: string; color: string; quantity: number}>;
+  const selectedVariantData = variants.find(v => v.id === selectedVariant);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5" key="order-page-v2">
-      {/* Clean order page without sticky header */}
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      {/* Header - KEYSTATE logo only */}
+      <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-center">
+            <img 
+              src="/src/assets/keystate-logo.png" 
+              alt="KEYSTATE" 
+              className="h-8"
+            />
+          </div>
+        </div>
+      </header>
+
       <main className="container mx-auto px-4 py-8 md:py-12 max-w-6xl">
-        {/* Company Logo & Details - Centered Hero */}
-        <div className="text-center mb-12 space-y-6">
+        {/* Hero Section - Company Logo & Agent Details */}
+        <div className="text-center mb-8 space-y-4">
           {campaign.logo_url && (
             <img 
               src={campaign.logo_url} 
               alt={campaign.company_name}
-              className="h-24 w-auto object-contain mx-auto"
+              className="h-20 w-auto object-contain mx-auto"
             />
           )}
-          <div className="space-y-2">
-            <h1 className="text-4xl font-heading font-bold">
+          <div>
+            <h1 className="text-3xl font-heading font-bold mb-2">
               {campaign.company_name}
             </h1>
             {campaign.contact_person && (
-              <p className="text-lg text-muted-foreground">
-                Your Agent: <span className="font-medium">{campaign.contact_person}</span>
+              <p className="text-lg text-muted-foreground mb-1">
+                Your Agent: {campaign.contact_person}
               </p>
             )}
+            <p className="text-sm text-muted-foreground">
+              Customize your keyrings below
+            </p>
           </div>
         </div>
 
         <StepProgress 
-          steps={["Confirm Details", "Select Keyring", "Order Details"]}
+          steps={["Select Keyring", "Order Details", "Contact Info"]}
           currentStep={step - 1}
         />
 
@@ -380,146 +296,8 @@ const Order = () => {
           {/* Main Form */}
           <div className="lg:col-span-2 space-y-6">
 
-            {/* Combined Details Form - Always visible at top */}
-            <Card className="animate-fade-in">
-              <CardHeader>
-                <CardTitle className="text-xl font-heading">Company & Contact Details</CardTitle>
-                <CardDescription>Review and confirm the details below</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Company Details Section */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Company Information</h3>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingName">Company Name *</Label>
-                    <Input
-                      id="shippingName"
-                      value={shippingName}
-                      onChange={(e) => setShippingName(e.target.value)}
-                      placeholder="Company Name Ltd"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingAddress">Company Address *</Label>
-                    <Input
-                      id="shippingAddress"
-                      value={shippingAddress}
-                      onChange={(e) => setShippingAddress(e.target.value)}
-                      placeholder="123 Main Street, City"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingPostcode">Postcode *</Label>
-                    <Input
-                      id="shippingPostcode"
-                      value={shippingPostcode}
-                      onChange={(e) => setShippingPostcode(e.target.value)}
-                      placeholder="SW1A 1AA"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingContact">Contact Person *</Label>
-                    <Input
-                      id="shippingContact"
-                      value={shippingContact}
-                      onChange={(e) => setShippingContact(e.target.value)}
-                      placeholder="John Doe"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                    />
-                  </div>
-                </div>
-
-                <div className="border-t pt-6 space-y-4">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Your Contact Details</h3>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Full Name *</Label>
-                    <Input
-                      id="name"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="John Smith"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email Address *</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="john@example.com"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+44 7XXX XXXXXX"
-                      disabled={detailsConfirmed}
-                      className={detailsConfirmed ? "bg-muted" : undefined}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  {detailsConfirmed ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full"
-                      onClick={() => setDetailsConfirmed(false)}
-                    >
-                      Edit Details
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      className="w-full"
-                      onClick={() => {
-                        if (!shippingName || !shippingAddress || !shippingPostcode || !shippingContact || !name || !email) {
-                          toast({
-                            title: "Missing information",
-                            description: "Please fill in all required fields",
-                            variant: "destructive",
-                          });
-                          return;
-                        }
-                        setDetailsConfirmed(true);
-                        if (step === 1) setStep(2);
-                      }}
-                    >
-                      Confirm Details
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
             {/* Step 1: Keyring Selection */}
-            {detailsConfirmed && step >= 1 && (
+            {step >= 1 && (
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <div>
@@ -534,24 +312,17 @@ const Order = () => {
                           </p>
                         </div>
                       ) : (
-                       variants.map((variant) => (
+                        variants.map((variant) => (
                           <KeyringTypeCard
                             key={variant.id}
                             id={variant.id}
                             label={variant.type}
                             description={variant.color}
                             imageUrl={variant.image_url}
-                            selected={variant.id in selectedVariants}
+                            selected={selectedVariant === variant.id}
                             onSelect={() => {
-                              setSelectedVariants(prev => {
-                                const newSelected = { ...prev };
-                                if (variant.id in newSelected) {
-                                  delete newSelected[variant.id];
-                                } else {
-                                  newSelected[variant.id] = 25;
-                                }
-                                return newSelected;
-                              });
+                              setSelectedVariant(variant.id);
+                              if (step === 1) setStep(2);
                             }}
                           />
                         ))
@@ -567,12 +338,128 @@ const Order = () => {
               </Card>
             )}
 
-            {/* Step 2: Order Details */}
-            {detailsConfirmed && step >= 2 && Object.keys(selectedVariants).length > 0 && (
+            {/* Step 2: Company Details & Order Details */}
+            {step >= 2 && (
+              <>
+                {/* Company Details Card */}
+                <Card className="animate-fade-in">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-heading">Company Details</CardTitle>
+                    <CardDescription>
+                      Pre-filled with the estate agent's details. Edit if needed, then confirm.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-end mb-2">
+                      <Badge variant="secondary" className="text-xs">
+                        {detailsEditing ? "Editing" : "Locked"}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingName">Company Name *</Label>
+                      <Input
+                        id="shippingName"
+                        value={shippingName}
+                        onChange={(e) => setShippingName(e.target.value)}
+                        placeholder="Company Name"
+                        readOnly={!detailsEditing}
+                        className={!detailsEditing ? "bg-muted" : undefined}
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingAddress">Address</Label>
+                        <Input
+                          id="shippingAddress"
+                          value={shippingAddress}
+                          onChange={(e) => setShippingAddress(e.target.value)}
+                          placeholder="123 Business Street"
+                          readOnly={!detailsEditing}
+                          className={!detailsEditing ? "bg-muted" : undefined}
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="shippingPostcode">Postcode</Label>
+                        <Input
+                          id="shippingPostcode"
+                          value={shippingPostcode}
+                          onChange={(e) => setShippingPostcode(e.target.value)}
+                          placeholder="SW1A 1AA"
+                          readOnly={!detailsEditing}
+                          className={!detailsEditing ? "bg-muted" : undefined}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="shippingContact">Contact Person</Label>
+                      <Input
+                        id="shippingContact"
+                        value={shippingContact}
+                        onChange={(e) => setShippingContact(e.target.value)}
+                        placeholder="John Doe"
+                        readOnly={!detailsEditing}
+                        className={!detailsEditing ? "bg-muted" : undefined}
+                      />
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                      {detailsEditing ? (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="sm:flex-1"
+                            onClick={() => {
+                              setDetailsEditing(false);
+                              setShippingName(campaign?.company_name || "");
+                              setShippingAddress(campaign?.company_address || "");
+                              setShippingPostcode(campaign?.company_postcode || "");
+                              setShippingContact(campaign?.contact_person || "");
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            type="button"
+                            className="sm:flex-1"
+                            onClick={() => {
+                              setDetailsEditing(false);
+                            }}
+                          >
+                            Save Changes
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="sm:flex-1"
+                            onClick={() => setDetailsEditing(true)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            className="sm:flex-1"
+                            onClick={() => setStep(3)}
+                          >
+                            Confirm
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Order Details Card */}
                 <Card className="animate-fade-in mt-6">
                   <CardHeader>
                     <CardTitle className="text-xl font-heading">Order Details</CardTitle>
-                    <CardDescription>Select quantities for each variant</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     {/* Payment Mode Toggle */}
@@ -601,54 +488,24 @@ const Order = () => {
                     </div>
                   </div>
 
-                  {/* Quantity Selection for Each Variant */}
-                  {Object.keys(selectedVariants).map((variantId) => {
-                    const variant = variants.find(v => v.id === variantId);
-                    if (!variant) return null;
-
-                    return (
-                      <div key={variantId} className="space-y-3 p-4 border rounded-lg">
-                        <div className="flex justify-between items-center mb-3">
-                          <div>
-                            <h4 className="font-semibold">{variant.type}</h4>
-                            <p className="text-sm text-muted-foreground">{variant.color}</p>
-                          </div>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedVariants(prev => {
-                                const newSelected = { ...prev };
-                                delete newSelected[variantId];
-                                return newSelected;
-                              });
-                            }}
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                        <Label>Select Quantity</Label>
-                        <RadioGroup
-                          value={selectedVariants[variantId].toString()}
-                          onValueChange={(value) => {
-                            setSelectedVariants(prev => ({
-                              ...prev,
-                              [variantId]: parseInt(value)
-                            }));
-                          }}
-                          className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                        >
-                          {(paymentMode === "subscription" 
-                            ? PRICING_CONFIG.subscription 
-                            : PRICING_CONFIG.oneOff
-                          ).map((tier) => {
-                            const isSelected = selectedVariants[variantId] === tier.quantity;
+                  {/* Quantity Selection - Radio Button Grid */}
+                  <div className="space-y-3">
+                    <Label>Select Quantity</Label>
+                    <RadioGroup
+                      value={quantity.toString()}
+                      onValueChange={(value) => setQuantity(parseInt(value))}
+                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                    >
+                      {(paymentMode === "subscription" 
+                        ? PRICING_CONFIG.subscription 
+                        : PRICING_CONFIG.oneOff
+                      ).map((tier) => {
+                        const isSelected = quantity === tier.quantity;
                         
                         return (
                           <label
                             key={tier.quantity}
-                            htmlFor={`quantity-${variantId}-${tier.quantity}`}
+                            htmlFor={`quantity-${tier.quantity}`}
                             className={`
                               relative flex cursor-pointer rounded-lg border-2 p-4 transition-all
                               ${isSelected 
@@ -659,7 +516,7 @@ const Order = () => {
                           >
                             <RadioGroupItem
                               value={tier.quantity.toString()}
-                              id={`quantity-${variantId}-${tier.quantity}`}
+                              id={`quantity-${tier.quantity}`}
                               className="sr-only"
                             />
                             
@@ -720,60 +577,72 @@ const Order = () => {
                             )}
                           </label>
                         );
-                       })}
+                      })}
                     </RadioGroup>
-                      </div>
-                    );
-                  })}
+                  </div>
 
                   {/* Promo Code (Optional) */}
                   <div className="space-y-2">
                     <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-                    <div className="flex gap-2">
-                      <Input
-                        id="promoCode"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode(e.target.value.toUpperCase());
-                          setAppliedCoupon(null);
-                        }}
-                        placeholder="Enter promo code"
-                        disabled={!!appliedCoupon}
-                      />
-                      {!appliedCoupon ? (
-                        <Button 
-                          type="button" 
-                          onClick={validateCoupon}
-                          variant="outline"
-                          disabled={!promoCode.trim()}
-                        >
-                          Apply
-                        </Button>
-                      ) : (
-                        <Button 
-                          type="button" 
-                          onClick={() => {
-                            setAppliedCoupon(null);
-                            setPromoCode("");
-                          }}
-                          variant="outline"
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </div>
-                    {appliedCoupon && (
-                      <p className="text-sm text-green-600 dark:text-green-400">
-                        ✓ {appliedCoupon.discount}% discount applied
-                      </p>
-                    )}
+                    <Input
+                      id="promoCode"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      placeholder="Enter promo code"
+                    />
                   </div>
+                </CardContent>
+              </Card>
+            </>
+            )}
+
+            {/* Step 3: Contact Information */}
+            {step >= 3 && (
+              <Card className="animate-fade-in">
+                <CardContent className="pt-6 space-y-6">
+                  <h3 className="text-lg font-heading font-semibold">Your Details</h3>
                   
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Full Name *</Label>
+                      <Input
+                        id="name"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        placeholder="John Smith"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="email">Email Address *</Label>
+                      <Input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="john@example.com"
+                        required
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone Number</Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+44 7XXX XXXXXX"
+                      />
+                    </div>
+                  </div>
+
                   <Button
                     onClick={handleSubmit} 
                     className="w-full" 
                     size="lg"
-                    disabled={submitting || Object.keys(selectedVariants).length === 0}
+                    disabled={submitting}
                   >
                     {submitting ? (
                       <>
@@ -781,7 +650,7 @@ const Order = () => {
                         Processing...
                       </>
                     ) : (
-                      "Continue to Checkout"
+                      "Proceed to Checkout"
                     )}
                   </Button>
                 </CardContent>
@@ -792,8 +661,12 @@ const Order = () => {
           {/* Order Summary Sidebar */}
           <div className="lg:sticky lg:top-24 h-fit">
             <OrderSummary
-              variants={selectedVariantItems}
-              paymentMode={paymentMode}
+              formData={{
+                keyringType: selectedVariantData?.type || "",
+                color: selectedVariantData?.color || "",
+                quantity: quantity,
+                paymentMode: paymentMode,
+              }}
             />
           </div>
         </div>

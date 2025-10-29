@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started v3");
+    logStep("Function started");
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
@@ -37,27 +37,17 @@ serve(async (req) => {
       quantity, 
       paymentMode, 
       priceId,
-      items 
+      promoCode 
     } = await req.json();
     
-    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId, itemsType: Array.isArray(items) ? typeof items : typeof items, itemsLength: Array.isArray(items) ? items.length : 0 });
+    logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
     if (!campaignId) throw new Error("Campaign ID is required");
+    if (!variantId) throw new Error("Variant ID is required");
     if (!customerName) throw new Error("Customer name is required");
     if (!customerEmail) throw new Error("Customer email is required");
-
-    const hasItems = Array.isArray(items) && items.length > 0;
-    if (!hasItems) {
-      if (!variantId) throw new Error("Variant ID is required");
-      if (!quantity) throw new Error("Quantity is required");
-      if (!priceId) throw new Error("Price ID is required");
-    } else {
-      for (const i of items) {
-        if (!i?.variantId || !i?.priceId || !i?.quantity) {
-          throw new Error("Invalid items payload");
-        }
-      }
-    }
+    if (!quantity) throw new Error("Quantity is required");
+    if (!priceId) throw new Error("Price ID is required");
 
     // Fetch campaign details for checkout metadata
     const { data: campaign, error: campaignError } = await supabaseClient
@@ -76,12 +66,13 @@ serve(async (req) => {
       .from("orders")
       .insert([{
         campaign_id: campaignId,
-        keyring_variant_id: variantId || (Array.isArray(items) && items[0]?.variantId) || null,
+        keyring_variant_id: variantId,
         customer_name: customerName,
         customer_email: customerEmail,
         customer_phone: customerPhone || null,
-        quantity: quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0),
+        quantity: quantity,
         payment_mode: paymentMode,
+        promo_code: promoCode || null,
         status: "pending_payment" as const,
       }])
       .select()
@@ -96,34 +87,14 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session using a single server-enforced price per mode
-    const totalQty = (Array.isArray(items) && items.length > 0)
-      ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0)
-      : Number(quantity || 0);
-
-    const UNIT_PRICE_ONE_OFF = "price_1SNKS1Rq8aA0Zjxf3qz776SY"; // £1.00 one-off per unit
-    const UNIT_PRICE_SUBSCRIPTION = "price_1SNKS0Rq8aA0Zjxfz2HSIBbp"; // £1.00 per unit per month
-
-    const priceForMode = paymentMode === "subscription" ? UNIT_PRICE_SUBSCRIPTION : UNIT_PRICE_ONE_OFF;
-    const finalLineItems = [{ price: priceForMode, quantity: totalQty }];
-
-    logStep("Server-enforced pricing", { priceForMode, totalQty });
-
-    // Calculate volume discount based on quantity
-    // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
-    // For one-off: 100+ gets 10%, 250+ gets 15%
-    let volumeDiscountPercent = 0;
-    if (paymentMode === "subscription") {
-      if (totalQty >= 250) volumeDiscountPercent = 20;
-      else if (totalQty >= 100) volumeDiscountPercent = 15;
-      else if (totalQty >= 50) volumeDiscountPercent = 10;
-    } else {
-      if (totalQty >= 250) volumeDiscountPercent = 15;
-      else if (totalQty >= 100) volumeDiscountPercent = 10;
-    }
-
+    // Create Stripe checkout session using the Price ID from frontend
     const sessionParams: any = {
-      line_items: finalLineItems,
+      line_items: [
+        {
+          price: priceId, // Use the Stripe Price ID directly
+          quantity: 1, // Quantity is baked into the price (e.g., "25 units/month")
+        },
+      ],
       mode: paymentMode === "subscription" ? "subscription" : "payment",
       success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
@@ -133,22 +104,10 @@ serve(async (req) => {
       },
       metadata: {
         order_id: order.id,
+        quantity: quantity,
         payment_mode: paymentMode,
-        quantity: totalQty,
-        items: Array.isArray(items) ? JSON.stringify(items.map((i: any) => ({ variantId: i.variantId, quantity: i.quantity }))) : undefined,
       },
     };
-    
-    // Apply volume discount if applicable
-    if (volumeDiscountPercent > 0) {
-      const volumeCoupon = await stripe.coupons.create({
-        percent_off: volumeDiscountPercent,
-        duration: paymentMode === "subscription" ? 'forever' : 'once',
-        name: `Volume Discount ${volumeDiscountPercent}%`,
-      });
-      sessionParams.discounts = [{ coupon: volumeCoupon.id }];
-      logStep("Volume discount applied", { volumeDiscountPercent, couponId: volumeCoupon.id });
-    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     logStep("Checkout session created", { sessionId: session.id });
