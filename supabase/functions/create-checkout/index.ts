@@ -40,6 +40,11 @@ serve(async (req) => {
 
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    
+    // Log Stripe key mode (masked for security)
+    const keyPrefix = stripeKey.substring(0, 10) + "...";
+    const keyMode = stripeKey.startsWith("sk_test_") ? "TEST" : stripeKey.startsWith("sk_live_") ? "LIVE" : "UNKNOWN";
+    logStep("Stripe configuration", { keyPrefix, mode: keyMode });
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
