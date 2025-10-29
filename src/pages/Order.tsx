@@ -130,11 +130,24 @@ const Order = () => {
     setSubmitting(true);
 
     try {
+      // Get the correct pricing tier
+      const pricingTier = getPricingTier(quantity, paymentMode === 'one-off' ? 'one-off' : 'subscription');
+      if (!pricingTier) {
+        toast({
+          title: "Invalid quantity",
+          description: "Please select a valid quantity tier",
+          variant: "destructive",
+        });
+        setSubmitting(false);
+        return;
+      }
+
       console.log("Creating checkout session with:", {
         campaignId: campaign.id,
         variantId: selectedVariant,
         quantity,
         paymentMode,
+        priceId: pricingTier.priceId,
       });
 
       // Create order and checkout session via edge function
@@ -142,7 +155,11 @@ const Order = () => {
         "create-checkout",
         {
           body: {
-            items: [{ variantId: selectedVariant, quantity }],
+            items: [{ 
+              variantId: selectedVariant, 
+              quantity,
+              priceId: pricingTier.priceId 
+            }],
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,

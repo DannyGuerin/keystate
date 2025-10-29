@@ -11,18 +11,11 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
-// Variant-based pricing map (variantId → Stripe Price ID)
-// Using actual keyring_variants UUIDs from database
-const PRICE_MAP: Record<string, string> = {
-  '2cf7245c-4440-405c-9d34-a8eb47ce902a': 'price_1SNXEzRq8aA0ZjxfXvNN1fQr',      // Classic Rectangle White/Green - £9.99
-  '74af0c59-6323-46aa-a5bf-0e2e9fa6193f': 'price_1SNXF0Rq8aA0ZjxfJKGj7bmg',      // Premium Rectangle - £14.99
-  '2873890c-bfad-46d1-8f00-2096a4ac0bdb': 'price_1SNXEzRq8aA0ZjxfXvNN1fQr',      // Classic Rectangle White - £9.99
-};
-
 // Type definitions for request payload
 type CheckoutItem = {
   variantId: string;
   quantity: number;
+  priceId: string; // Stripe Price ID from frontend pricing config
 };
 
 type CheckoutPayload = {
@@ -117,35 +110,32 @@ serve(async (req) => {
         );
       }
 
-      // Check variantId exists in PRICE_MAP
-      const priceId = PRICE_MAP[item.variantId];
-      if (!priceId) {
-        logStep("Invalid variantId - returning 400", { variantId: item.variantId });
+      // Check priceId exists
+      if (!item.priceId || typeof item.priceId !== 'string') {
         return new Response(
-          JSON.stringify({ 
-            error: `Unknown variantId: ${item.variantId}. This variant is not configured for checkout.` 
-          }),
+          JSON.stringify({ error: "Each item must have a valid priceId" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      // Validate and clamp quantity (integer >= 1, capped at 50)
+      // Validate and clamp quantity (integer >= 10, capped at 250)
       const rawQuantity = item.quantity;
-      if (!Number.isInteger(rawQuantity) || rawQuantity < 1 || rawQuantity > 50) {
+      if (!Number.isInteger(rawQuantity) || rawQuantity < 10 || rawQuantity > 250) {
         logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: rawQuantity });
         return new Response(
           JSON.stringify({ 
-            error: `Quantity must be an integer between 1 and 50. Got: ${rawQuantity}` 
+            error: `Quantity must be an integer between 10 and 250. Got: ${rawQuantity}` 
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      const clampedQuantity = Math.min(Math.max(1, rawQuantity | 0), 50);
+      const clampedQuantity = Math.min(Math.max(10, rawQuantity | 0), 250);
 
+      // Use quantity of 1 for Stripe since the priceId already contains the tier pricing
       line_items.push({
-        price: priceId,
-        quantity: clampedQuantity,
+        price: item.priceId,
+        quantity: 1,
       });
 
       variantIds.push(item.variantId);
