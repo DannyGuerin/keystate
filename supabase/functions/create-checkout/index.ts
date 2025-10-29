@@ -96,32 +96,18 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session supporting multi-variant line items
-    // Build and aggregate line items by price to avoid duplicate recurring prices in Stripe Checkout
-    const rawLineItems = Array.isArray(items) && items.length > 0
-      ? items.map((i: any) => ({ price: i.priceId, quantity: Number(i.quantity || 0) }))
-      : [{ price: priceId, quantity: Number(quantity || 0) }];
-    
-    logStep("Raw line items before aggregation", { rawLineItems });
+    // Create Stripe checkout session using a single server-enforced price per mode
+    const totalQty = (Array.isArray(items) && items.length > 0)
+      ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0)
+      : Number(quantity || 0);
 
-    const aggregatedMap = new Map<string, number>();
-    for (const li of rawLineItems) {
-      if (!li.price || !li.quantity) continue;
-      aggregatedMap.set(li.price, (aggregatedMap.get(li.price) || 0) + li.quantity);
-    }
-    const lineItems = Array.from(aggregatedMap.entries()).map(([price, qty]) => ({ price, quantity: qty }));
-    
-    logStep("Line items after aggregation", { lineItems });
-    // After aggregation, ensure a single subscription line item to avoid Stripe duplicate recurring price errors
-    let finalLineItems = lineItems;
-    if (paymentMode === "subscription" && finalLineItems.length > 1) {
-      const totalQ = finalLineItems.reduce((s: number, li: any) => s + Number(li.quantity || 0), 0);
-      const firstPrice = finalLineItems[0].price;
-      finalLineItems = [{ price: firstPrice, quantity: totalQ }];
-      logStep("Consolidated subscription line items", { finalLineItems });
-    }
+    const UNIT_PRICE_ONE_OFF = "price_1SNKS1Rq8aA0Zjxf3qz776SY"; // £1.00 one-off per unit
+    const UNIT_PRICE_SUBSCRIPTION = "price_1SNKS0Rq8aA0Zjxfz2HSIBbp"; // £1.00 per unit per month
 
-    const totalQty = finalLineItems.reduce((s: number, li: any) => s + Number(li.quantity || 0), 0);
+    const priceForMode = paymentMode === "subscription" ? UNIT_PRICE_SUBSCRIPTION : UNIT_PRICE_ONE_OFF;
+    const finalLineItems = [{ price: priceForMode, quantity: totalQty }];
+
+    logStep("Server-enforced pricing", { priceForMode, totalQty });
 
     // Calculate if we need to apply volume discount based on quantity
     // For subscription: 50+ gets 10%, 100+ gets 15%, 250+ gets 20%
