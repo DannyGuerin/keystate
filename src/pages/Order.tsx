@@ -138,7 +138,7 @@ const Order = () => {
       });
 
       // Create order and checkout session via edge function
-      const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(
+      const { data, error } = await supabase.functions.invoke(
         "create-checkout",
         {
           body: {
@@ -153,43 +153,23 @@ const Order = () => {
         }
       );
 
-      if (checkoutError) {
-        console.error("Checkout error:", checkoutError);
-        
-        // Try to extract the actual error message from the function response
-        let errorMessage = "Unable to create checkout session";
-        
-        // If the error has a message property, use it
-        if (checkoutError.message) {
-          errorMessage = checkoutError.message;
-        }
-        
-        // If checkoutData exists and has an error property, that's the actual function error
-        if (checkoutData && typeof checkoutData === 'object' && 'error' in checkoutData) {
-          errorMessage = (checkoutData as any).error;
-        }
-        
+      // Extract error message reliably from server response or SDK error
+      const msg =
+        (data && typeof data === 'object' && 'error' in data && (data as any).error) ||
+        (error?.message) || 'Checkout failed';
+      
+      if (error || !data?.url) {
+        console.error("Checkout error:", { error, data });
         toast({
           title: "Checkout failed",
-          description: errorMessage,
+          description: msg,
           variant: "destructive",
         });
         setSubmitting(false);
         return;
       }
 
-      if (!checkoutData?.url) {
-        console.error("No checkout URL returned:", checkoutData);
-        toast({
-          title: "Checkout failed",
-          description: "No checkout URL received from server",
-          variant: "destructive",
-        });
-        setSubmitting(false);
-        return;
-      }
-
-      console.log("Redirecting to Stripe checkout:", checkoutData.url);
+      console.log("Redirecting to Stripe checkout:", data.url);
       
       // Show a loading toast
       toast({
@@ -198,7 +178,7 @@ const Order = () => {
       });
 
       // Redirect to Stripe Checkout
-      window.location.href = checkoutData.url;
+      window.location.href = data.url;
     } catch (error) {
       console.error("Unexpected error during checkout:", error);
       toast({
