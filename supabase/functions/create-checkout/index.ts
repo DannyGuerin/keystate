@@ -12,10 +12,10 @@ const logStep = (step: string, details?: any) => {
 };
 
 // Variant-based pricing map (variantId → Stripe Price ID)
-// TODO: Replace with actual variant UUIDs from your keyring_variants table
+// Using actual keyring_variants UUIDs from database
 const PRICE_MAP: Record<string, string> = {
-  'keyring-basic-black': 'price_test_black_123',
-  'keyring-premium': 'price_test_premium_456',
+  '2cf7245c-4440-405c-9d34-a8eb47ce902a': 'price_test_black_123',      // Classic Rectangle White/Green
+  '74af0c59-6323-46aa-a5bf-0e2e9fa6193f': 'price_test_premium_456',   // Classic Rectangle White/Green
 };
 
 // Type definitions for request payload
@@ -152,6 +152,7 @@ serve(async (req) => {
     }
 
     const mode = payload.mode || 'payment';
+    const paymentMode = mode === 'payment' ? 'one-off' : 'subscription';
     const totalQuantity = quantities.reduce((sum, q) => sum + q, 0);
     
     logStep("Line items summary", { 
@@ -188,7 +189,7 @@ serve(async (req) => {
         customer_email: payload.customerEmail,
         customer_phone: payload.customerPhone || null,
         quantity: totalQuantity,
-        payment_mode: mode as 'payment' | 'subscription',
+        payment_mode: paymentMode as 'one-off' | 'subscription',
         promo_code: payload.promoCode || null,
         status: "pending_payment" as const,
       }])
