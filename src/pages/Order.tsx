@@ -230,6 +230,7 @@ const Order = () => {
         totalQuantity,
         paymentMode,
         items,
+        itemsPriceIds: items.map(i => i.priceId),
       });
 
       const { data: checkoutData, error: checkoutError } = await supabase.functions.invoke(

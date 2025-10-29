@@ -101,6 +101,8 @@ serve(async (req) => {
     const rawLineItems = Array.isArray(items) && items.length > 0
       ? items.map((i: any) => ({ price: i.priceId, quantity: Number(i.quantity || 0) }))
       : [{ price: priceId, quantity: Number(quantity || 0) }];
+    
+    logStep("Raw line items before aggregation", { rawLineItems });
 
     const aggregatedMap = new Map<string, number>();
     for (const li of rawLineItems) {
@@ -108,6 +110,8 @@ serve(async (req) => {
       aggregatedMap.set(li.price, (aggregatedMap.get(li.price) || 0) + li.quantity);
     }
     const lineItems = Array.from(aggregatedMap.entries()).map(([price, qty]) => ({ price, quantity: qty }));
+    
+    logStep("Line items after aggregation", { lineItems });
     // After aggregation, ensure a single subscription line item to avoid Stripe duplicate recurring price errors
     let finalLineItems = lineItems;
     if (paymentMode === "subscription" && finalLineItems.length > 1) {
