@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -12,12 +11,12 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
-// Variant-based pricing map (variantId -> Stripe Price ID)
-// TODO: Populate with actual variant IDs and their corresponding price IDs
+// Variant-based pricing map (variantId → Stripe Price ID)
+// TODO: Populate with actual variant UUIDs from your keyring_variants table
 const PRICE_MAP: Record<string, string> = {
-  // Example format:
-  // 'variant-uuid-here': 'price_1SHrNsRq8aA0ZjxfeOJ39fxH',
-  // Add your keyring variant IDs and their Stripe price IDs below
+  // Example format - replace with your actual variant IDs:
+  // '2873890c-bfad-46d1-8f00-2096a4ac0bdb': 'price_1SHrNsRq8aA0ZjxfeOJ39fxH',
+  // Add all your keyring variant IDs and their Stripe price IDs here
 };
 
 // Type definitions for request payload
@@ -104,9 +103,10 @@ serve(async (req) => {
       );
     }
 
-    // VALIDATION: Validate each item
-    const validatedLineItems: Array<{ price: string; quantity: number }> = [];
-    let totalQuantity = 0;
+    // VALIDATION & BUILD: Validate each item and build line_items for Stripe
+    const line_items: Array<{ price: string; quantity: number }> = [];
+    const variantIds: string[] = [];
+    const quantities: number[] = [];
 
     for (const item of payload.items) {
       // Check variantId exists
@@ -129,28 +129,36 @@ serve(async (req) => {
         );
       }
 
-      // Check quantity is valid (integer >= 1, capped at 50)
-      if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > 50) {
-        logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: item.quantity });
+      // Validate and clamp quantity (integer >= 1, capped at 50)
+      const rawQuantity = item.quantity;
+      if (!Number.isInteger(rawQuantity) || rawQuantity < 1 || rawQuantity > 50) {
+        logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: rawQuantity });
         return new Response(
           JSON.stringify({ 
-            error: `Quantity must be an integer between 1 and 50. Got: ${item.quantity}` 
+            error: `Quantity must be an integer between 1 and 50. Got: ${rawQuantity}` 
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      validatedLineItems.push({
+      const clampedQuantity = Math.min(Math.max(1, rawQuantity | 0), 50);
+
+      line_items.push({
         price: priceId,
-        quantity: item.quantity,
+        quantity: clampedQuantity,
       });
 
-      totalQuantity += item.quantity;
+      variantIds.push(item.variantId);
+      quantities.push(clampedQuantity);
     }
 
     const mode = payload.mode || 'payment';
-    logStep("Validation complete", { 
-      itemCount: validatedLineItems.length, 
+    const totalQuantity = quantities.reduce((sum, q) => sum + q, 0);
+    
+    logStep("Line items summary", { 
+      count: line_items.length, 
+      variantIds,
+      quantities,
       totalQuantity,
       mode 
     });
@@ -198,28 +206,65 @@ serve(async (req) => {
 
     logStep("Order created", { orderId: order.id, totalQuantity });
 
-    logStep("About to call Stripe", { lineItems: validatedLineItems, mode });
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    // CALL STRIPE REST API
+    const siteUrl = Deno.env.get("SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || req.headers.get("origin");
+    
+    const params = new URLSearchParams();
+    params.set('mode', mode);
+    params.set('success_url', `${siteUrl}/thank-you?session_id={CHECKOUT_SESSION_ID}`);
+    params.set('cancel_url', `${siteUrl}/order/${campaign.unique_code || ''}`);
+    params.set('customer_email', payload.customerEmail);
+    params.set('allow_promotion_codes', 'true');
 
-    // Create Stripe checkout session
-    const sessionParams: Stripe.Checkout.SessionCreateParams = {
-      line_items: validatedLineItems,
-      mode: mode === 'subscription' ? 'subscription' : 'payment',
-      success_url: `${req.headers.get("origin")}/thank-you?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.get("origin")}/order/${campaign.unique_code || ''}`,
-      customer_email: payload.customerEmail,
-      shipping_address_collection: {
-        allowed_countries: ["GB", "US", "CA", "AU", "IE"],
-      },
-      metadata: {
-        order_id: order.id,
-        total_quantity: totalQuantity.toString(),
-        payment_mode: mode,
-      },
-    };
+    // Add line items
+    line_items.forEach((li, i) => {
+      params.set(`line_items[${i}][price]`, li.price);
+      params.set(`line_items[${i}][quantity]`, String(li.quantity));
+    });
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
-    logStep("Stripe session created", { sessionId: session.id });
+    // Add shipping address collection
+    params.set('shipping_address_collection[allowed_countries][0]', 'GB');
+    params.set('shipping_address_collection[allowed_countries][1]', 'US');
+    params.set('shipping_address_collection[allowed_countries][2]', 'CA');
+    params.set('shipping_address_collection[allowed_countries][3]', 'AU');
+    params.set('shipping_address_collection[allowed_countries][4]', 'IE');
+
+    // Add metadata
+    params.set('metadata[order_id]', order.id);
+    params.set('metadata[total_quantity]', String(totalQuantity));
+    params.set('metadata[payment_mode]', mode);
+
+    // Add promotion code if provided
+    if (payload.promoCode) {
+      params.set('discounts[0][promotion_code]', payload.promoCode);
+    }
+
+    logStep("About to call Stripe", { url: 'https://api.stripe.com/v1/checkout/sessions' });
+
+    const stripeResponse = await fetch('https://api.stripe.com/v1/checkout/sessions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${stripeKey}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: params,
+    });
+
+    const responseText = await stripeResponse.text();
+
+    if (!stripeResponse.ok) {
+      logStep('Stripe error', { status: stripeResponse.status, body: responseText });
+      return new Response(
+        JSON.stringify({ error: responseText }),
+        { 
+          status: 500, 
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+        }
+      );
+    }
+
+    const session = JSON.parse(responseText);
+    logStep('Stripe session created', { id: session.id });
 
     // Update order with stripe session ID
     await supabaseClient
@@ -229,10 +274,13 @@ serve(async (req) => {
       })
       .eq("id", order.id);
 
-    return new Response(JSON.stringify({ url: session.url }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({ url: session.url }), 
+      { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
+    );
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorStack = error instanceof Error ? error.stack : undefined;
