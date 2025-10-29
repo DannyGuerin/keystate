@@ -36,20 +36,36 @@ serve(async (req) => {
   }
 
   try {
-    logStep("Function started");
+    logStep("Handler entered");
 
+    // EARLY GUARDRAIL: Check for Stripe secret key before proceeding
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    
-    // Log Stripe key mode (masked for security)
-    const keyPrefix = stripeKey.substring(0, 10) + "...";
-    const keyMode = stripeKey.startsWith("sk_test_") ? "TEST" : stripeKey.startsWith("sk_live_") ? "LIVE" : "UNKNOWN";
-    logStep("Stripe configuration", { keyPrefix, mode: keyMode });
+    if (!stripeKey) {
+      logStep("CRITICAL: Missing STRIPE_SECRET_KEY");
+      return new Response(
+        JSON.stringify({ error: "Missing STRIPE_SECRET_KEY" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
+    }
+
+    // Log Stripe configuration (masked for security)
+    console.log("Stripe configuration", {
+      hasSecretKey: !!stripeKey,
+      keyPrefix: stripeKey.slice(0, 10),
+      mode: stripeKey.startsWith("sk_live_") ? "LIVE" :
+            stripeKey.startsWith("sk_test_") ? "TEST" : "UNKNOWN",
+    });
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    const body = await req.json();
+    logStep("Parsed body", body);
 
     const { 
       campaignId, 
@@ -61,7 +77,7 @@ serve(async (req) => {
       paymentMode, 
       priceId,
       promoCode 
-    } = await req.json();
+    } = body;
     
     logStep("Request received", { campaignId, variantId, quantity, paymentMode, priceId });
 
@@ -157,6 +173,7 @@ serve(async (req) => {
 
     logStep("Order created", { orderId: order.id, quantity: order.quantity });
 
+    logStep("About to call Stripe", { priceId: validatedPriceId, mode: paymentMode });
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Create Stripe checkout session using the VALIDATED Price ID
@@ -182,7 +199,7 @@ serve(async (req) => {
     };
 
     const session = await stripe.checkout.sessions.create(sessionParams);
-    logStep("Checkout session created", { sessionId: session.id });
+    logStep("Stripe session created", { sessionId: session.id });
 
     // Update order with stripe session ID
     await supabaseClient
@@ -198,7 +215,16 @@ serve(async (req) => {
     });
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error("Checkout error", { 
+      message: errorMessage,
+      stack: errorStack,
+      name: error instanceof Error ? error.name : undefined
+    });
+    
     logStep("ERROR", { message: errorMessage });
+    
     return new Response(JSON.stringify({ error: errorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
