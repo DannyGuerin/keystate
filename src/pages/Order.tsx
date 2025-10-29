@@ -49,7 +49,7 @@ const Order = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState(25);
+  const [quantity, setQuantity] = useState(10);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
   
