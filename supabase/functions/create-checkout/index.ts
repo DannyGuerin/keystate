@@ -209,6 +209,12 @@ serve(async (req) => {
     // CALL STRIPE REST API
     const siteUrl = Deno.env.get("SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || req.headers.get("origin");
     
+    logStep("Environment configuration", {
+      hasSiteUrl: !!Deno.env.get("SITE_URL"),
+      siteUrl: siteUrl,
+      hasVitePublicUrl: !!Deno.env.get("VITE_PUBLIC_SITE_URL"),
+    });
+    
     const params = new URLSearchParams();
     params.set('mode', mode);
     params.set('success_url', `${siteUrl}/thank-you?session_id={CHECKOUT_SESSION_ID}`);
