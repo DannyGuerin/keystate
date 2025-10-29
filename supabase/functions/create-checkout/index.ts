@@ -65,13 +65,20 @@ serve(async (req) => {
     if (!customerName) throw new Error("Customer name is required");
     if (!customerEmail) throw new Error("Customer email is required");
     if (!quantity) throw new Error("Quantity is required");
-    if (!priceId) throw new Error("Price ID is required");
 
     // SERVER-SIDE VALIDATION: Verify quantity is a valid tier
     const validQuantities = [10, 25, 50, 100, 250];
     if (!validQuantities.includes(quantity)) {
-      logStep("Invalid quantity", { quantity });
-      throw new Error(`Invalid quantity: ${quantity}. Must be one of: ${validQuantities.join(', ')}`);
+      logStep("Invalid quantity - returning 400", { quantity, validQuantities });
+      return new Response(
+        JSON.stringify({ 
+          error: `Invalid quantity: ${quantity}. Must be one of: ${validQuantities.join(', ')}` 
+        }), 
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 400,
+        }
+      );
     }
 
     // SERVER-SIDE VALIDATION: Get correct price ID from server config
@@ -81,18 +88,29 @@ serve(async (req) => {
 
     if (!correctPriceId) {
       logStep("No price configured for tier", { quantity, mode });
-      throw new Error(`No price configured for ${quantity} units (${mode})`);
+      return new Response(
+        JSON.stringify({ 
+          error: `No price configured for ${quantity} units in ${mode} mode` 
+        }), 
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        }
+      );
     }
 
-    // SERVER-SIDE VALIDATION: Verify client sent correct price ID
-    if (priceId !== correctPriceId) {
-      logStep("Price ID mismatch - using server price", { 
-        clientSent: priceId, 
-        serverExpected: correctPriceId,
-        quantity,
-        mode
-      });
-      // Use server price, not client price (security measure)
+    // SERVER-SIDE VALIDATION: Check if client sent a price ID
+    if (priceId) {
+      if (priceId !== correctPriceId) {
+        logStep("Price ID mismatch - using server price", { 
+          clientSent: priceId, 
+          serverExpected: correctPriceId,
+          quantity,
+          mode
+        });
+      }
+    } else {
+      logStep("Client omitted priceId - using server price", { quantity, mode });
     }
 
     const validatedPriceId = correctPriceId;

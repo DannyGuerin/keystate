@@ -170,9 +170,23 @@ const Order = () => {
 
       if (checkoutError) {
         console.error("Checkout error:", checkoutError);
+        
+        // Try to extract the actual error message from the function response
+        let errorMessage = "Unable to create checkout session";
+        
+        // If the error has a message property, use it
+        if (checkoutError.message) {
+          errorMessage = checkoutError.message;
+        }
+        
+        // If checkoutData exists and has an error property, that's the actual function error
+        if (checkoutData && typeof checkoutData === 'object' && 'error' in checkoutData) {
+          errorMessage = (checkoutData as any).error;
+        }
+        
         toast({
           title: "Checkout failed",
-          description: checkoutError?.message || "Unable to create checkout session",
+          description: errorMessage,
           variant: "destructive",
         });
         setSubmitting(false);
