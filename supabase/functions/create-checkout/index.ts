@@ -97,9 +97,19 @@ serve(async (req) => {
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
     // Create Stripe checkout session supporting multi-variant line items
-    const lineItems = Array.isArray(items) && items.length > 0
-      ? items.map((i: any) => ({ price: i.priceId, quantity: i.quantity }))
-      : [{ price: priceId, quantity: quantity }];
+    // Build and aggregate line items by price to avoid duplicate recurring prices in Stripe Checkout
+    const rawLineItems = Array.isArray(items) && items.length > 0
+      ? items.map((i: any) => ({ price: i.priceId, quantity: Number(i.quantity || 0) }))
+      : [{ price: priceId, quantity: Number(quantity || 0) }];
+
+    const aggregatedMap = new Map<string, number>();
+    for (const li of rawLineItems) {
+      if (!li.price || !li.quantity) continue;
+      aggregatedMap.set(li.price, (aggregatedMap.get(li.price) || 0) + li.quantity);
+    }
+    const lineItems = Array.from(aggregatedMap.entries()).map(([price, qty]) => ({ price, quantity: qty }));
+
+    logStep("Line items aggregated", { lineItems });
 
     const totalQty = quantity || (Array.isArray(items) ? items.reduce((s: number, i: any) => s + Number(i.quantity || 0), 0) : 0);
 
@@ -133,15 +143,7 @@ serve(async (req) => {
       },
     };
     
-    // Apply volume discount if applicable
-    if (volumeDiscountPercent > 0) {
-      const volumeCoupon = await stripe.coupons.create({
-        percent_off: volumeDiscountPercent,
-        duration: paymentMode === "subscription" ? 'forever' : 'once',
-        name: `Volume Discount ${volumeDiscountPercent}%`,
-      });
-      sessionParams.discounts = [{ coupon: volumeCoupon.id }];
-    }
+    // No discounts applied (coupon/promo/volume removed per requirement)
 
     const session = await stripe.checkout.sessions.create(sessionParams);
     logStep("Checkout session created", { sessionId: session.id });
