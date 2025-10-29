@@ -12,6 +12,24 @@ const logStep = (step: string, details?: any) => {
   console.log(`[CREATE-CHECKOUT] ${step}${detailsStr}`);
 };
 
+// Server-side pricing tiers (must match frontend)
+const PRICING_TIERS = {
+  oneOff: {
+    10: "price_1SHrNsRq8aA0ZjxfeOJ39fxH",
+    25: "price_1SI3ybRq8aA0ZjxfQj3IVd8e",
+    50: "price_1SI42ARq8aA0ZjxfcR3R3BTe",
+    100: "price_1SI44eRq8aA0ZjxfJGTQ42dq",
+    250: "price_1SI469Rq8aA0ZjxffupuxZy3",
+  },
+  subscription: {
+    10: "price_1SI48PRq8aA0ZjxfQTLnXccX",
+    25: "price_1SI4B2Rq8aA0ZjxfmMopzAjy",
+    50: "price_1SI4CURq8aA0ZjxfbDP2zWQG",
+    100: "price_1SI4EXRq8aA0ZjxfqnMDKfKy",
+    250: "price_1SI4GERq8aA0ZjxfY3jwm7Fd",
+  }
+} as const;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -48,6 +66,37 @@ serve(async (req) => {
     if (!customerEmail) throw new Error("Customer email is required");
     if (!quantity) throw new Error("Quantity is required");
     if (!priceId) throw new Error("Price ID is required");
+
+    // SERVER-SIDE VALIDATION: Verify quantity is a valid tier
+    const validQuantities = [10, 25, 50, 100, 250];
+    if (!validQuantities.includes(quantity)) {
+      logStep("Invalid quantity", { quantity });
+      throw new Error(`Invalid quantity: ${quantity}. Must be one of: ${validQuantities.join(', ')}`);
+    }
+
+    // SERVER-SIDE VALIDATION: Get correct price ID from server config
+    const mode = paymentMode === "subscription" ? "subscription" : "oneOff";
+    const tierConfig = PRICING_TIERS[mode];
+    const correctPriceId = tierConfig[quantity as keyof typeof tierConfig];
+
+    if (!correctPriceId) {
+      logStep("No price configured for tier", { quantity, mode });
+      throw new Error(`No price configured for ${quantity} units (${mode})`);
+    }
+
+    // SERVER-SIDE VALIDATION: Verify client sent correct price ID
+    if (priceId !== correctPriceId) {
+      logStep("Price ID mismatch - using server price", { 
+        clientSent: priceId, 
+        serverExpected: correctPriceId,
+        quantity,
+        mode
+      });
+      // Use server price, not client price (security measure)
+    }
+
+    const validatedPriceId = correctPriceId;
+    logStep("Price validated", { priceId: validatedPriceId, quantity, mode });
 
     // Fetch campaign details for checkout metadata
     const { data: campaign, error: campaignError } = await supabaseClient
@@ -87,12 +136,12 @@ serve(async (req) => {
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 
-    // Create Stripe checkout session using the Price ID from frontend
+    // Create Stripe checkout session using the VALIDATED Price ID
     const sessionParams: any = {
       line_items: [
         {
-          price: priceId, // Use the Stripe Price ID directly
-          quantity: 1, // Quantity is baked into the price (e.g., "25 units/month")
+          price: validatedPriceId, // Use server-validated price ID
+          quantity: 1, // Always 1 (tier price includes all units)
         },
       ],
       mode: paymentMode === "subscription" ? "subscription" : "payment",
