@@ -12,11 +12,10 @@ const logStep = (step: string, details?: any) => {
 };
 
 // Variant-based pricing map (variantId → Stripe Price ID)
-// TODO: Populate with actual variant UUIDs from your keyring_variants table
+// TODO: Replace with actual variant UUIDs from your keyring_variants table
 const PRICE_MAP: Record<string, string> = {
-  // Example format - replace with your actual variant IDs:
-  // '2873890c-bfad-46d1-8f00-2096a4ac0bdb': 'price_1SHrNsRq8aA0ZjxfeOJ39fxH',
-  // Add all your keyring variant IDs and their Stripe price IDs here
+  'keyring-basic-black': 'price_test_black_123',
+  'keyring-premium': 'price_test_premium_456',
 };
 
 // Type definitions for request payload
