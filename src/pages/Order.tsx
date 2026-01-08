@@ -14,6 +14,7 @@ import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Loader2 } from "lucide-react";
 import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
+import keystateLogo from "@/assets/keystate-logo.png";
 
 interface Campaign {
   id: string;
@@ -245,7 +246,7 @@ const Order = () => {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-center">
             <img
-              src="/src/assets/keystate-logo.png"
+              src={keystateLogo}
               alt="KEYSTATE"
               className="h-8"
             />
