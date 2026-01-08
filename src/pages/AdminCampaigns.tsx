@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, ArrowLeft, Copy } from "lucide-react";
 import { getPublicBaseUrl } from "@/lib/publicUrl";
+import { copyToClipboard } from "@/lib/utils";
 
 interface Campaign {
   id: string;
