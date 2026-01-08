@@ -55,9 +55,7 @@ const AdminCampaigns = () => {
     setLoading(false);
   };
 
-  import { copyToClipboard } from "@/lib/utils";
 
-  // ... in main component ...
 
   const copyLink = async (code: string) => {
     const url = `${getPublicBaseUrl()}/order/${code}`;
