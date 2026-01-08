@@ -54,15 +54,20 @@ const AdminCampaigns = () => {
     setLoading(false);
   };
 
+  import { copyToClipboard } from "@/lib/utils";
+
+  // ... in main component ...
+
   const copyLink = async (code: string) => {
-    try {
-      const url = `${getPublicBaseUrl()}/order/${code}`;
-      await navigator.clipboard.writeText(url);
+    const url = `${getPublicBaseUrl()}/order/${code}`;
+    const success = await copyToClipboard(url);
+
+    if (success) {
       toast({
         title: "Link copied",
         description: "Campaign link copied to clipboard",
       });
-    } catch (err) {
+    } else {
       toast({
         title: "Failed to copy",
         description: "Please copy the link manually",
