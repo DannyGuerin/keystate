@@ -294,7 +294,7 @@ const CampaignBuilder = () => {
         </div>
       </header>
 
-      <main className="container mx-auto px-6 py-8 max-w-4xl space-y-6">
+      <main className="container mx-auto px-6 pt-8 pb-32 max-w-4xl space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Company Details</CardTitle>
