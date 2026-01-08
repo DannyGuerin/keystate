@@ -563,9 +563,9 @@ const Order = () => {
                                 </div>
 
                                 {/* Savings Badge (only if discount > 0) */}
-                                {tier.discount && tier.discount > 0 && (
+                                {(tier.discount ?? 0) > 0 && (
                                   <div className="text-xs font-medium text-green-600 dark:text-green-400">
-                                    Save {tier.discount}% vs one-off
+                                    Save {tier.discount}%
                                   </div>
                                 )}
                               </div>

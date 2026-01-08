@@ -62,7 +62,7 @@ export const PRICING_CONFIG = {
       priceId: "price_1Sn3xtHK4We2BSbICHDC1mqP",
       unitPrice: 0.88,
       total: 22.00,
-      discount: 7,
+      discount: 12, // 12% off base £1.00
       isPopular: true,
     },
     {
@@ -70,21 +70,21 @@ export const PRICING_CONFIG = {
       priceId: "price_1Sn3z4HK4We2BSbImqbEO1pC",
       unitPrice: 0.80,
       total: 40.00,
-      discount: 11,
+      discount: 20, // 20% off base £1.00
     },
     {
       quantity: 100,
       priceId: "price_1Sn3zyHK4We2BSbIj6L49Sn5",
       unitPrice: 0.75,
       total: 75.00,
-      discount: 12,
+      discount: 25, // 25% off base £1.00
     },
     {
       quantity: 250,
       priceId: "price_1Sn40eHK4We2BSbIgPvaoCjz",
       unitPrice: 0.72,
       total: 180.00,
-      discount: 10,
+      discount: 28, // 28% off base £1.00
       isBestValue: true,
     },
   ] as PricingTier[],
