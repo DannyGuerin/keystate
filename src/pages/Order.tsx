@@ -452,7 +452,7 @@ const Order = () => {
                               onClick={() => {
                                 setStep(3);
                                 setTimeout(() => {
-                                  document.getElementById('contact-info')?.scrollIntoView({ behavior: 'smooth' });
+                                  document.getElementById('order-details')?.scrollIntoView({ behavior: 'smooth' });
                                 }, 100);
                               }}
                             >
@@ -466,7 +466,7 @@ const Order = () => {
                 </Card>
 
                 {/* Order Details Card */}
-                <Card className="animate-fade-in mt-6">
+                <Card id="order-details" className="animate-fade-in mt-6">
                   <CardHeader>
                     <CardTitle className="text-xl font-heading">Order Details</CardTitle>
                   </CardHeader>
