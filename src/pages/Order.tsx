@@ -449,7 +449,12 @@ const Order = () => {
                             <Button
                               type="button"
                               className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
-                              onClick={() => setStep(3)}
+                              onClick={() => {
+                                setStep(3);
+                                setTimeout(() => {
+                                  document.getElementById('contact-info')?.scrollIntoView({ behavior: 'smooth' });
+                                }, 100);
+                              }}
                             >
                               Confirm Details
                             </Button>
@@ -600,9 +605,8 @@ const Order = () => {
               </>
             )}
 
-            {/* Step 3: Contact Information */}
             {step >= 3 && (
-              <Card className="animate-fade-in">
+              <Card id="contact-info" className="animate-fade-in">
                 <CardContent className="pt-6 space-y-6">
                   <h3 className="text-lg font-heading font-semibold">Your Details</h3>
 
