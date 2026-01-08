@@ -31,7 +31,7 @@ export const StepProgress = ({ steps, currentStep }: StepProgressProps) => {
                   "w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium transition-all duration-300",
                   isCompleted && "bg-primary text-primary-foreground",
                   isCurrent && "bg-primary text-primary-foreground ring-4 ring-primary/20",
-                  isUpcoming && "bg-muted text-muted-foreground font-semibold"
+                  isUpcoming && "bg-muted text-white font-semibold"
                 )}
               >
                 {index + 1}
