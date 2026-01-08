@@ -54,13 +54,21 @@ const AdminCampaigns = () => {
     setLoading(false);
   };
 
-  const copyLink = (code: string) => {
-    const url = `${getPublicBaseUrl()}/order/${code}`;
-    navigator.clipboard.writeText(url);
-    toast({
-      title: "Link copied",
-      description: "Campaign link copied to clipboard",
-    });
+  const copyLink = async (code: string) => {
+    try {
+      const url = `${getPublicBaseUrl()}/order/${code}`;
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link copied",
+        description: "Campaign link copied to clipboard",
+      });
+    } catch (err) {
+      toast({
+        title: "Failed to copy",
+        description: "Please copy the link manually",
+        variant: "destructive",
+      });
+    }
   };
 
   const getStatusColor = (status: string) => {
