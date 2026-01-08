@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
@@ -12,7 +11,7 @@ const logStep = (step: string, details?: any) => {
   console.log(`[VERIFY-PAYMENT] ${step}${detailsStr}`);
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -33,12 +32,23 @@ serve(async (req) => {
 
     if (!sessionId) throw new Error("Session ID is required");
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    // Call Stripe API directly via fetch to avoid SDK typing issues
+    logStep("Retrieving session from Stripe API");
+    const stripeResponse = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${sessionId}?expand[]=payment_intent&expand[]=customer`,
+      {
+        headers: {
+          Authorization: `Bearer ${stripeKey}`,
+        },
+      }
+    );
 
-    // Retrieve the session from Stripe
-    const session = await stripe.checkout.sessions.retrieve(sessionId, {
-      expand: ['customer', 'payment_intent'],
-    });
+    if (!stripeResponse.ok) {
+      const errorText = await stripeResponse.text();
+      throw new Error(`Stripe API error: ${stripeResponse.status} ${errorText}`);
+    }
+
+    const session = await stripeResponse.json();
     logStep("Session retrieved", { status: session.payment_status });
 
     if (session.payment_status !== "paid") {
@@ -48,6 +58,9 @@ serve(async (req) => {
     // Extract shipping details
     const shippingDetails = session.shipping_details;
     const orderId = session.metadata?.order_id;
+    const paymentIntentId = typeof session.payment_intent === 'string'
+      ? session.payment_intent
+      : session.payment_intent?.id;
 
     if (!orderId) throw new Error("Order ID not found in session");
 
@@ -56,9 +69,7 @@ serve(async (req) => {
       .from("orders")
       .update({
         status: "paid",
-        stripe_payment_intent_id: typeof session.payment_intent === 'string'
-          ? session.payment_intent
-          : session.payment_intent?.id,
+        stripe_payment_intent_id: paymentIntentId,
         shipping_name: shippingDetails?.name || null,
         shipping_address_line1: shippingDetails?.address?.line1 || null,
         shipping_address_line2: shippingDetails?.address?.line2 || null,
