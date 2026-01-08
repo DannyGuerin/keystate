@@ -514,7 +514,7 @@ const CampaignBuilder = () => {
               <CardTitle>QR Code</CardTitle>
               <CardDescription>Download and include in your mailshot</CardDescription>
             </CardHeader>
-            <div className="flex flex-col items-center gap-4">
+            <CardContent className="flex flex-col items-center gap-6">
               {status !== "active" && (
                 <div className="w-full p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-md mb-2">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
@@ -620,7 +620,7 @@ const CampaignBuilder = () => {
                   Download Sticker Asset
                 </Button>
               </div>
-            </div>
+            </CardContent>
           </Card>
         )}
       </main>
