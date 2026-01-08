@@ -38,7 +38,7 @@ export const StepProgress = ({ steps, currentStep }: StepProgressProps) => {
               </div>
               <span
                 className={cn(
-                  "text-xs font-medium text-center max-w-[80px] leading-tight",
+                  "text-xs font-medium text-center max-w-[80px] leading-tight hidden sm:block",
                   (isCompleted || isCurrent) && "text-foreground",
                   isUpcoming && "text-muted-foreground"
                 )}

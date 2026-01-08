@@ -474,22 +474,24 @@ const Order = () => {
                     {/* Payment Mode Toggle */}
                     <div className="space-y-2">
                       <Label>Payment Type</Label>
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <Button
                           type="button"
                           variant={paymentMode === "subscription" ? "default" : "outline"}
-                          className="flex-1"
+                          className="flex-1 justify-center sm:justify-start h-auto py-3 sm:py-2"
                           onClick={() => setPaymentMode("subscription")}
                         >
-                          Monthly Subscription
-                          {paymentMode === "subscription" && (
-                            <Badge className="ml-2 bg-white text-primary">Recommended</Badge>
-                          )}
+                          <span className="flex items-center flex-wrap gap-2 justify-center sm:justify-start">
+                            Monthly Subscription
+                            {paymentMode === "subscription" && (
+                              <Badge className="bg-white text-primary whitespace-nowrap">Recommended</Badge>
+                            )}
+                          </span>
                         </Button>
                         <Button
                           type="button"
                           variant={paymentMode === "one-off" ? "default" : "outline"}
-                          className="flex-1"
+                          className="flex-1 h-auto py-3 sm:py-2"
                           onClick={() => setPaymentMode("one-off")}
                         >
                           One-Off Purchase

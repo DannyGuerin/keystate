@@ -16,7 +16,7 @@ export const KeyringTypeCard = ({ id, label, description, imageUrl, selected, on
       type="button"
       onClick={onSelect}
       className={cn(
-        "relative flex flex-col items-center gap-4 p-6 rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] min-h-[180px]",
+        "relative flex flex-col items-center gap-4 p-4 sm:p-6 rounded-2xl border-2 transition-all duration-200 hover:scale-[1.02] min-h-[150px] sm:min-h-[180px]",
         selected
           ? "border-primary bg-primary/5 shadow-lg"
           : "border-border bg-card hover:border-primary/40 hover:shadow-md"
