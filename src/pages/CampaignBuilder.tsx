@@ -93,10 +93,10 @@ const CampaignBuilder = () => {
   };
 
   const generateCode = () => {
-    const code = companyName
+    const code = (companyName
       .toUpperCase()
       .replace(/[^A-Z0-9]/g, "")
-      .substring(0, 10) + new Date().getFullYear();
+      .substring(0, 3) + new Date().getFullYear());
     setUniqueCode(code);
   };
 
