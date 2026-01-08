@@ -31,30 +31,33 @@ export const KeyringTypeCard = ({ id, label, description, imageUrl, selected, on
 
       {/* Image thumbnail or fallback icon */}
       {imageUrl ? (
-        <div className="w-28 h-28 rounded-lg overflow-hidden border-2 border-border bg-white p-2">
-          <img
-            src={imageUrl}
-            alt={label}
-            className="w-full h-full object-contain"
-          />
+        {
+          imageUrl?(
+        <div className = "w-32 h-32 md:w-40 md:h-40 bg-white rounded-lg p-1 flex items-center justify-center" >
+              <img
+                src={imageUrl}
+                alt={label}
+                className="w-full h-full object-contain"
+              />
         </div>
-      ) : (
-        <div className={cn(
-          "w-20 h-20 rounded-xl flex items-center justify-center text-2xl font-heading font-bold transition-colors",
-          selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
-        )}>
-          {label.charAt(0)}
-        </div>
-      )}
+  ) : (
+    <div className={cn(
+      "w-20 h-20 rounded-xl flex items-center justify-center text-2xl font-heading font-bold transition-colors",
+      selected ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"
+    )}>
+      {label.charAt(0)}
+    </div>
+  )
+}
 
-      <div className="text-center">
-        <h4 className="font-heading font-semibold text-base mb-1">
-          {label}
-        </h4>
-        {description && (
-          <p className="text-sm text-muted-foreground">{description}</p>
-        )}
-      </div>
-    </button>
+<div className="text-center">
+  <h4 className="font-heading font-semibold text-base mb-1">
+    {label}
+  </h4>
+  {description && (
+    <p className="text-sm text-muted-foreground">{description}</p>
+  )}
+</div>
+    </button >
   );
 };
