@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { KeyringTypeCard } from "@/components/KeyringTypeCard";
 import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
-import { Loader2 } from "lucide-react";
+import { Loader2, Check } from "lucide-react";
 import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
 import keystateLogo from "@/assets/keystate-logo.png";
 
@@ -394,7 +394,7 @@ const Order = () => {
                         onChange={(e) => setShippingContact(e.target.value)}
                         placeholder="John Doe"
                         readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-muted" : undefined}
+                        className={!detailsEditing ? "bg-slate-50" : undefined}
                       />
                     </div>
 
@@ -435,13 +435,25 @@ const Order = () => {
                           >
                             Edit
                           </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
-                            onClick={() => setStep(3)}
-                          >
-                            Confirm Details
-                          </Button>
+                          {step >= 3 ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="sm:flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-50 opacity-100" // opacity-100 to override disabled opacity if we want it to look crisp
+                              disabled
+                            >
+                              <Check className="h-4 w-4 mr-2" />
+                              Confirmed
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
+                              onClick={() => setStep(3)}
+                            >
+                              Confirm Details
+                            </Button>
+                          )}
                         </>
                       )}
                     </div>
