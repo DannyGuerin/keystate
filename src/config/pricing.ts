@@ -12,14 +12,14 @@ export const PRICING_CONFIG = {
   oneOff: [
     {
       quantity: 10,
-      priceId: "price_1SHrNsRq8aA0ZjxfeOJ39fxH",
+      priceId: "price_1Sn46nHK4We2BSbIBIfVeCBO",
       unitPrice: 1.00,
       total: 10.00,
       discount: 0,
     },
     {
       quantity: 25,
-      priceId: "price_1SI3ybRq8aA0ZjxfQj3IVd8e",
+      priceId: "price_1Sn47YHK4We2BSbIPgJyxpUC",
       unitPrice: 0.95,
       total: 23.75,
       discount: 5,
@@ -27,39 +27,39 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 50,
-      priceId: "price_1SI42ARq8aA0ZjxfcR3R3BTe",
+      priceId: "price_1Sn485HK4We2BSbIx37eToYk",
       unitPrice: 0.90,
       total: 45.00,
       discount: 10,
     },
     {
       quantity: 100,
-      priceId: "price_1SI44eRq8aA0ZjxfJGTQ42dq",
+      priceId: "price_1Sn49jHK4We2BSbIrb7ZAlGt",
       unitPrice: 0.85,
       total: 85.00,
       discount: 15,
     },
     {
       quantity: 250,
-      priceId: "price_1SI469Rq8aA0ZjxffupuxZy3",
+      priceId: "price_1Sn4ACHK4We2BSbIvfwLPS0b",
       unitPrice: 0.80,
       total: 200.00,
       discount: 20,
       isBestValue: true,
     },
   ] as PricingTier[],
-  
+
   subscription: [
     {
       quantity: 10,
-      priceId: "price_1SI48PRq8aA0ZjxfQTLnXccX",
+      priceId: "price_1Sn343HK4We2BSbIAOowFI4h",
       unitPrice: 1.00,
       total: 10.00,
       discount: 0, // no savings vs one-off
     },
     {
       quantity: 25,
-      priceId: "price_1SI4B2Rq8aA0ZjxfmMopzAjy",
+      priceId: "price_1Sn3xtHK4We2BSbICHDC1mqP",
       unitPrice: 0.88,
       total: 22.00,
       discount: 7,
@@ -67,21 +67,21 @@ export const PRICING_CONFIG = {
     },
     {
       quantity: 50,
-      priceId: "price_1SI4CURq8aA0ZjxfbDP2zWQG",
+      priceId: "price_1Sn3z4HK4We2BSbImqbEO1pC",
       unitPrice: 0.80,
       total: 40.00,
       discount: 11,
     },
     {
       quantity: 100,
-      priceId: "price_1SI4EXRq8aA0ZjxfqnMDKfKy",
+      priceId: "price_1Sn3zyHK4We2BSbIj6L49Sn5",
       unitPrice: 0.75,
       total: 75.00,
       discount: 12,
     },
     {
       quantity: 250,
-      priceId: "price_1SI4GERq8aA0ZjxfY3jwm7Fd",
+      priceId: "price_1Sn40eHK4We2BSbIgPvaoCjz",
       unitPrice: 0.72,
       total: 180.00,
       discount: 10,

@@ -14,7 +14,7 @@ interface OrderSummaryProps {
 
 export const OrderSummary = ({ formData }: OrderSummaryProps) => {
   // Get pricing information
-  const pricingTier = formData.quantity 
+  const pricingTier = formData.quantity
     ? getPricingTier(formData.quantity, formData.paymentMode)
     : null;
 
@@ -27,7 +27,7 @@ export const OrderSummary = ({ formData }: OrderSummaryProps) => {
         <div className="space-y-3">
           <div className="flex justify-between items-start">
             <span className="text-sm text-muted-foreground">Keyring Type</span>
-            <span className="text-sm font-medium text-right max-w-[150px]">
+            <span className="text-sm font-medium text-right max-w-[150px] leading-tight">
               {formData.keyringType || "—"}
             </span>
           </div>

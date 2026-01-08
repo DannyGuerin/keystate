@@ -32,6 +32,8 @@ const CampaignBuilder = () => {
   const [companyAddress, setCompanyAddress] = useState("");
   const [companyPostcode, setCompanyPostcode] = useState("");
   const [contactPerson, setContactPerson] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [uniqueCode, setUniqueCode] = useState("");
   const [status, setStatus] = useState<"draft" | "active" | "paused" | "completed">("draft");
   const [notes, setNotes] = useState("");
@@ -70,6 +72,10 @@ const CampaignBuilder = () => {
     setCompanyAddress(campaign.company_address || "");
     setCompanyPostcode(campaign.company_postcode || "");
     setContactPerson(campaign.contact_person || "");
+    // @ts-ignore
+    setContactEmail(campaign.contact_email || "");
+    // @ts-ignore
+    setContactPhone(campaign.contact_phone || "");
     setUniqueCode(campaign.unique_code);
     setStatus(campaign.status);
     setNotes(campaign.notes || "");
@@ -182,6 +188,8 @@ const CampaignBuilder = () => {
       company_address: companyAddress,
       company_postcode: companyPostcode,
       contact_person: contactPerson,
+      contact_email: contactEmail,
+      contact_phone: contactPhone,
       unique_code: uniqueCode,
       status,
       notes,
@@ -330,6 +338,28 @@ const CampaignBuilder = () => {
                 onChange={(e) => setContactPerson(e.target.value)}
                 placeholder="John Smith"
               />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contactEmail">Contact Email</Label>
+                <Input
+                  id="contactEmail"
+                  type="email"
+                  value={contactEmail}
+                  onChange={(e) => setContactEmail(e.target.value)}
+                  placeholder="john@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">Contact Phone</Label>
+                <Input
+                  id="contactPhone"
+                  type="tel"
+                  value={contactPhone}
+                  onChange={(e) => setContactPhone(e.target.value)}
+                  placeholder="+44 7XXX XXXXXX"
+                />
+              </div>
             </div>
             <div className="space-y-2">
               <Label htmlFor="logo">Company Logo (Optional)</Label>
@@ -484,7 +514,7 @@ const CampaignBuilder = () => {
               <CardTitle>QR Code</CardTitle>
               <CardDescription>Download and include in your mailshot</CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-col items-center gap-4">
+            <div className="flex flex-col items-center gap-4">
               {status !== "active" && (
                 <div className="w-full p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-900 rounded-md mb-2">
                   <p className="text-sm text-yellow-800 dark:text-yellow-200">
@@ -492,11 +522,24 @@ const CampaignBuilder = () => {
                   </p>
                 </div>
               )}
-              <QRCodeSVG id="campaign-qr-code" value={campaignUrl} size={200} />
+
+              {/* Sticker Preview Area */}
+              <div
+                id="sticker-preview"
+                className="bg-white p-6 rounded-lg border-2 border-dashed border-gray-300 flex flex-col items-center justify-center gap-2 w-[300px] h-[300px]"
+              >
+                <QRCodeSVG id="campaign-qr-code" value={campaignUrl} size={180} />
+                <div className="text-center mt-2">
+                  <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Scan to Order</p>
+                  <p className="text-xl font-bold font-mono text-black mt-1">Code: {uniqueCode}</p>
+                </div>
+              </div>
+
               <div className="p-3 bg-muted rounded-md w-full text-center">
                 <p className="text-sm font-mono break-all">{campaignUrl}</p>
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex gap-2 flex-wrap justify-center">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -515,33 +558,69 @@ const CampaignBuilder = () => {
                   onClick={() => window.open(campaignUrl, "_blank")}
                 >
                   <ExternalLink className="h-4 w-4 mr-2" />
-                  Open in New Tab
+                  Test Link
                 </Button>
                 <Button
                   onClick={() => {
+                    // Logic to download the sticker div as an image
+                    // This is a simplified client-side implementation
+                    // Ideally we'd use html2canvas, but here we can reconstruct it on a canvas
                     const svg = document.getElementById("campaign-qr-code");
                     if (!svg) return;
+
                     const svgData = new XMLSerializer().serializeToString(svg);
                     const canvas = document.createElement("canvas");
                     const ctx = canvas.getContext("2d");
                     const img = new Image();
-                    img.onload = () => {
-                      canvas.width = img.width;
-                      canvas.height = img.height;
-                      ctx?.drawImage(img, 0, 0);
-                      const pngFile = canvas.toDataURL("image/png");
-                      const downloadLink = document.createElement("a");
-                      downloadLink.download = `${uniqueCode}-qr.png`;
-                      downloadLink.href = pngFile;
-                      downloadLink.click();
-                    };
-                    img.src = "data:image/svg+xml;base64," + btoa(svgData);
+
+                    // Sticker dimensions (approx 300x300 at high DPI)
+                    const width = 600;
+                    const height = 600;
+                    canvas.width = width;
+                    canvas.height = height;
+
+                    if (ctx) {
+                      // White background
+                      ctx.fillStyle = "#FFFFFF";
+                      ctx.fillRect(0, 0, width, height);
+
+                      // Draw QR Code
+                      img.onload = () => {
+                        // Centered QR
+                        const qrSize = 400;
+                        const x = (width - qrSize) / 2;
+                        const y = 80; // Top padding
+                        ctx.drawImage(img, x, y, qrSize, qrSize);
+
+                        // Draw Text
+                        ctx.fillStyle = "#000000";
+                        ctx.textAlign = "center";
+
+                        // "Scan to Order"
+                        ctx.font = "bold 24px sans-serif";
+                        ctx.fillStyle = "#666666";
+                        ctx.fillText("SCAN TO ORDER", width / 2, 40); // Top text
+
+                        // "Code: XXXX"
+                        ctx.font = "bold 48px monospace";
+                        ctx.fillStyle = "#000000";
+                        ctx.fillText(`Code: ${uniqueCode}`, width / 2, height - 60);
+
+                        // Download
+                        const pngFile = canvas.toDataURL("image/png");
+                        const downloadLink = document.createElement("a");
+                        downloadLink.download = `${uniqueCode}-sticker.png`;
+                        downloadLink.href = pngFile;
+                        downloadLink.click();
+                      };
+                      img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                    }
                   }}
                 >
-                  Download QR Code
+                  Download Sticker Asset
                 </Button>
               </div>
-            </CardContent>
+            </div>
           </Card>
         )}
       </main>

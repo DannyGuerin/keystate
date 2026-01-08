@@ -5,42 +5,30 @@ import keystateLogoUrl from "@/assets/keystate-logo.png";
 export default function Footer() {
   return (
     <footer className="bg-card border-t mt-auto">
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6">
           <div>
-            <img 
-              src={keystateLogoUrl} 
-              alt="KEYSTATE" 
-              className="h-10 mb-4"
+            <img
+              src={keystateLogoUrl}
+              alt="KEYSTATE"
+              className="h-8"
             />
-            <p className="text-muted-foreground">
-              Premium branded keyrings for businesses
-            </p>
           </div>
-          
-          <div>
-            <h3 className="font-semibold mb-4">Quick Links</h3>
-            <nav className="space-y-2">
-              <Link 
-                to="/login" 
-                className="block text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Admin Login
-              </Link>
-            </nav>
-          </div>
-          
-          <div>
-            <h3 className="font-semibold mb-4">Contact</h3>
-            <p className="text-muted-foreground">
-              Get in touch using the form above
-            </p>
-          </div>
+
+          <nav className="flex items-center gap-6 text-sm font-medium">
+            <span className="text-muted-foreground select-none">Contact</span>
+            <Link
+              to="/login"
+              className="text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Login
+            </Link>
+          </nav>
         </div>
-        
-        <Separator className="my-8" />
-        
-        <div className="text-center text-sm text-muted-foreground">
+
+        <Separator className="my-6 block md:hidden" />
+
+        <div className="text-center md:text-right text-xs text-muted-foreground md:mt-0">
           <p>&copy; {new Date().getFullYear()} KEYSTATE. All rights reserved.</p>
         </div>
       </div>

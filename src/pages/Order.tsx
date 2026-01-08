@@ -22,7 +22,10 @@ interface Campaign {
   company_postcode: string | null;
   status: string;
   logo_url: string | null;
+  logo_url: string | null;
   contact_person: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
 }
 
 interface KeyringVariant {
@@ -52,7 +55,7 @@ const Order = () => {
   const [quantity, setQuantity] = useState(10);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
-  
+
   // Shipping details state - pre-filled from campaign
   const [shippingName, setShippingName] = useState("");
   const [shippingAddress, setShippingAddress] = useState("");
@@ -76,7 +79,7 @@ const Order = () => {
 
   const fetchCampaign = async () => {
     console.log("Fetching campaign with code:", code);
-    
+
     // Use the secure database function that only exposes essential campaign data
     const { data: campaignData, error: campaignError } = await supabase
       .rpc("get_campaign_for_order", { campaign_code: code });
@@ -98,12 +101,17 @@ const Order = () => {
     const campaign = campaignData[0];
     console.log("Campaign details:", campaign);
     setCampaign(campaign);
-    
+
     // Pre-fill shipping details with campaign data
     setShippingName(campaign.company_name || "");
     setShippingAddress(campaign.company_address || "");
     setShippingPostcode(campaign.company_postcode || "");
     setShippingContact(campaign.contact_person || "");
+
+    // Pre-fill contact details if available
+    if (campaign.contact_email) setEmail(campaign.contact_email);
+    if (campaign.contact_phone) setPhone(campaign.contact_phone);
+    if (campaign.contact_person) setName(campaign.contact_person);
 
     const { data: variantsData, error: variantsError } = await supabase
       .from("keyring_variants")
@@ -155,10 +163,10 @@ const Order = () => {
         "create-checkout",
         {
           body: {
-            items: [{ 
-              variantId: selectedVariant, 
+            items: [{
+              variantId: selectedVariant,
               quantity,
-              priceId: pricingTier.priceId 
+              priceId: pricingTier.priceId
             }],
             customerName: name,
             customerEmail: email,
@@ -174,7 +182,7 @@ const Order = () => {
       const msg =
         (data && typeof data === 'object' && 'error' in data && (data as any).error) ||
         (error?.message) || 'Checkout failed';
-      
+
       if (error || !data?.url) {
         console.error("Checkout error:", { error, data });
         toast({
@@ -187,7 +195,7 @@ const Order = () => {
       }
 
       console.log("Redirecting to Stripe checkout:", data.url);
-      
+
       // Show a loading toast
       toast({
         title: "Redirecting to checkout...",
@@ -236,9 +244,9 @@ const Order = () => {
       <header className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-center">
-            <img 
-              src="/src/assets/keystate-logo.png" 
-              alt="KEYSTATE" 
+            <img
+              src="/src/assets/keystate-logo.png"
+              alt="KEYSTATE"
               className="h-8"
             />
           </div>
@@ -249,10 +257,10 @@ const Order = () => {
         {/* Hero Section - Company Logo & Agent Details */}
         <div className="text-center mb-8 space-y-4">
           {campaign.logo_url && (
-            <img 
-              src={campaign.logo_url} 
+            <img
+              src={campaign.logo_url}
               alt={campaign.company_name}
-              className="h-20 w-auto object-contain mx-auto"
+              className="h-24 w-auto max-w-[200px] object-contain mx-auto"
             />
           )}
           <div>
@@ -270,7 +278,7 @@ const Order = () => {
           </div>
         </div>
 
-        <StepProgress 
+        <StepProgress
           steps={["Select Keyring", "Order Details", "Contact Info"]}
           currentStep={step - 1}
         />
@@ -329,7 +337,7 @@ const Order = () => {
                   <CardHeader>
                     <CardTitle className="text-xl font-heading">Company Details</CardTitle>
                     <CardDescription>
-                      Pre-filled with the estate agent's details. Edit if needed, then confirm.
+                      Pre-filled with the estate agent's details. Edit if needed, <strong className="text-primary font-bold">then confirm</strong>.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -428,10 +436,10 @@ const Order = () => {
                           </Button>
                           <Button
                             type="button"
-                            className="sm:flex-1"
+                            className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
                             onClick={() => setStep(3)}
                           >
-                            Confirm
+                            Confirm Details
                           </Button>
                         </>
                       )}
@@ -449,134 +457,134 @@ const Order = () => {
                     <div className="space-y-2">
                       <Label>Payment Type</Label>
                       <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={paymentMode === "subscription" ? "default" : "outline"}
-                        className="flex-1"
-                        onClick={() => setPaymentMode("subscription")}
-                      >
-                        Monthly Subscription
-                        {paymentMode === "subscription" && (
-                          <Badge className="ml-2 bg-white text-primary">Recommended</Badge>
-                        )}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={paymentMode === "one-off" ? "default" : "outline"}
-                        className="flex-1"
-                        onClick={() => setPaymentMode("one-off")}
-                      >
-                        One-Off Purchase
-                      </Button>
+                        <Button
+                          type="button"
+                          variant={paymentMode === "subscription" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => setPaymentMode("subscription")}
+                        >
+                          Monthly Subscription
+                          {paymentMode === "subscription" && (
+                            <Badge className="ml-2 bg-white text-primary">Recommended</Badge>
+                          )}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={paymentMode === "one-off" ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => setPaymentMode("one-off")}
+                        >
+                          One-Off Purchase
+                        </Button>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Quantity Selection - Radio Button Grid */}
-                  <div className="space-y-3">
-                    <Label>Select Quantity</Label>
-                    <RadioGroup
-                      value={quantity.toString()}
-                      onValueChange={(value) => setQuantity(parseInt(value))}
-                      className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                    >
-                      {(paymentMode === "subscription" 
-                        ? PRICING_CONFIG.subscription 
-                        : PRICING_CONFIG.oneOff
-                      ).map((tier) => {
-                        const isSelected = quantity === tier.quantity;
-                        
-                        return (
-                          <label
-                            key={tier.quantity}
-                            htmlFor={`quantity-${tier.quantity}`}
-                            className={`
+                    {/* Quantity Selection - Radio Button Grid */}
+                    <div className="space-y-3">
+                      <Label>Select Quantity</Label>
+                      <RadioGroup
+                        value={quantity.toString()}
+                        onValueChange={(value) => setQuantity(parseInt(value))}
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
+                      >
+                        {(paymentMode === "subscription"
+                          ? PRICING_CONFIG.subscription
+                          : PRICING_CONFIG.oneOff
+                        ).map((tier) => {
+                          const isSelected = quantity === tier.quantity;
+
+                          return (
+                            <label
+                              key={tier.quantity}
+                              htmlFor={`quantity-${tier.quantity}`}
+                              className={`
                               relative flex cursor-pointer rounded-lg border-2 p-4 transition-all
-                              ${isSelected 
-                                ? 'border-primary bg-primary/5 shadow-md' 
-                                : 'border-border hover:border-primary/50 hover:bg-accent/30'
-                              }
+                              ${isSelected
+                                  ? 'border-primary bg-primary/5 shadow-md'
+                                  : 'border-border hover:border-primary/50 hover:bg-accent/30'
+                                }
                             `}
-                          >
-                            <RadioGroupItem
-                              value={tier.quantity.toString()}
-                              id={`quantity-${tier.quantity}`}
-                              className="sr-only"
-                            />
-                            
-                            <div className="flex-1 space-y-1">
-                              {/* Quantity Heading */}
-                              <div className="flex items-center justify-between">
-                                <span className="font-semibold text-base">
-                                  {tier.quantity} {paymentMode === "subscription" ? "per month" : "units"}
-                                </span>
-                                {tier.isPopular && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    POPULAR
-                                  </Badge>
-                                )}
-                                {tier.isBestValue && (
-                                  <Badge variant="default" className="text-xs">
-                                    BEST VALUE
-                                  </Badge>
+                            >
+                              <RadioGroupItem
+                                value={tier.quantity.toString()}
+                                id={`quantity-${tier.quantity}`}
+                                className="sr-only"
+                              />
+
+                              <div className="flex-1 space-y-1">
+                                {/* Quantity Heading */}
+                                <div className="flex items-center justify-between">
+                                  <span className="font-semibold text-base">
+                                    {tier.quantity} {paymentMode === "subscription" ? "per month" : "units"}
+                                  </span>
+                                  {tier.isPopular && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      POPULAR
+                                    </Badge>
+                                  )}
+                                  {tier.isBestValue && (
+                                    <Badge variant="default" className="text-xs">
+                                      BEST VALUE
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                {/* Pricing Display */}
+                                <div className="text-sm">
+                                  <span className="font-bold text-lg">
+                                    {formatPrice(tier.total)}
+                                  </span>
+                                  {paymentMode === "subscription" && (
+                                    <span className="text-muted-foreground">/mo</span>
+                                  )}
+                                </div>
+
+                                {/* Unit Price */}
+                                <div className="text-xs text-muted-foreground">
+                                  {formatPrice(tier.unitPrice)} per keyring
+                                </div>
+
+                                {/* Savings Badge (only if discount > 0) */}
+                                {tier.discount && tier.discount > 0 && (
+                                  <div className="text-xs font-medium text-green-600 dark:text-green-400">
+                                    Save {tier.discount}% vs one-off
+                                  </div>
                                 )}
                               </div>
-                              
-                              {/* Pricing Display */}
-                              <div className="text-sm">
-                                <span className="font-bold text-lg">
-                                  {formatPrice(tier.total)}
-                                </span>
-                                {paymentMode === "subscription" && (
-                                  <span className="text-muted-foreground">/mo</span>
-                                )}
-                              </div>
-                              
-                              {/* Unit Price */}
-                              <div className="text-xs text-muted-foreground">
-                                {formatPrice(tier.unitPrice)} per keyring
-                              </div>
-                              
-                              {/* Savings Badge (only if discount > 0) */}
-                              {tier.discount && tier.discount > 0 && (
-                                <div className="text-xs font-medium text-green-600 dark:text-green-400">
-                                  Save {tier.discount}% vs one-off
+
+                              {/* Selection Indicator */}
+                              {isSelected && (
+                                <div className="absolute top-2 right-2">
+                                  <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                                    <svg
+                                      className="h-3 w-3 text-white"
+                                      fill="currentColor"
+                                      viewBox="0 0 12 12"
+                                    >
+                                      <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" />
+                                    </svg>
+                                  </div>
                                 </div>
                               )}
-                            </div>
-                            
-                            {/* Selection Indicator */}
-                            {isSelected && (
-                              <div className="absolute top-2 right-2">
-                                <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                  <svg
-                                    className="h-3 w-3 text-white"
-                                    fill="currentColor"
-                                    viewBox="0 0 12 12"
-                                  >
-                                    <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" />
-                                  </svg>
-                                </div>
-                              </div>
-                            )}
-                          </label>
-                        );
-                      })}
-                    </RadioGroup>
-                  </div>
+                            </label>
+                          );
+                        })}
+                      </RadioGroup>
+                    </div>
 
-                  {/* Promo Code (Optional) */}
-                  <div className="space-y-2">
-                    <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-                    <Input
-                      id="promoCode"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value)}
-                      placeholder="Enter promo code"
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </>
+                    {/* Promo Code (Optional) */}
+                    <div className="space-y-2">
+                      <Label htmlFor="promoCode">Promo Code (Optional)</Label>
+                      <Input
+                        id="promoCode"
+                        value={promoCode}
+                        onChange={(e) => setPromoCode(e.target.value)}
+                        placeholder="Enter promo code"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
             )}
 
             {/* Step 3: Contact Information */}
@@ -584,7 +592,7 @@ const Order = () => {
               <Card className="animate-fade-in">
                 <CardContent className="pt-6 space-y-6">
                   <h3 className="text-lg font-heading font-semibold">Your Details</h3>
-                  
+
                   <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="name">Full Name *</Label>
@@ -622,8 +630,8 @@ const Order = () => {
                   </div>
 
                   <Button
-                    onClick={handleSubmit} 
-                    className="w-full" 
+                    onClick={handleSubmit}
+                    className="w-full"
                     size="lg"
                     disabled={submitting}
                   >

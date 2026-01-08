@@ -2,52 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
     /* KEYSTATE Brand Colors */
-    --background: 215 37% 97%; /* #F7F9FB */
-    --foreground: 205 24% 22%; /* #303841 */
+    --background: 215 37% 97%;
+    /* #F7F9FB */
+    --foreground: 205 24% 22%;
+    /* #303841 */
 
-    --card: 0 0% 100%; /* #FFFFFF */
+    --card: 0 0% 100%;
+    /* #FFFFFF */
     --card-foreground: 205 24% 22%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 205 24% 22%;
 
     /* Primary/Accent - KEYSTATE Orange */
-    --primary: 14 100% 57%; /* #FF5722 */
+    --primary: 14 100% 57%;
+    /* #FF5722 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 215 37% 97%; /* Light background */
+    --secondary: 215 37% 97%;
+    /* Light background */
     --secondary-foreground: 205 24% 22%;
 
-    --muted: 220 9% 46%; /* #6B7280 */
+    --muted: 220 9% 46%;
+    /* #6B7280 */
     --muted-foreground: 220 9% 46%;
 
     /* Accent is the same as primary for KEYSTATE */
-    --accent: 14 100% 57%; /* #FF5722 */
+    --accent: 14 100% 57%;
+    /* #FF5722 */
     --accent-foreground: 0 0% 100%;
 
     /* Semantic colors */
-    --destructive: 0 71% 51%; /* #DC2626 */
+    --destructive: 0 71% 51%;
+    /* #DC2626 */
     --destructive-foreground: 0 0% 100%;
 
-    --success: 142 71% 45%; /* #16A34A */
-    --warning: 38 92% 50%; /* #F59E0B */
+    --success: 142 71% 45%;
+    /* #16A34A */
+    --warning: 38 92% 50%;
+    /* #F59E0B */
 
-    --border: 216 20% 92%; /* #E6EAF0 */
+    --border: 216 20% 92%;
+    /* #E6EAF0 */
     --input: 216 20% 92%;
     --ring: 14 100% 57%;
 
-    --radius: 1rem; /* rounded-2xl for cards */
+    --radius: 1rem;
+    /* rounded-2xl for cards */
 
     /* KEYSTATE specific tokens */
-    --ks-accent: 14 100% 57%; /* #FF5722 */
-    --ks-accent-hover: 14 88% 50%; /* #E04E1F */
+    --ks-accent: 14 100% 57%;
+    /* #FF5722 */
+    --ks-accent-hover: 14 88% 50%;
+    /* #E04E1F */
     --ks-success: 142 71% 45%;
     --ks-warning: 38 92% 50%;
     --ks-danger: 0 71% 51%;
@@ -59,19 +73,23 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 210 40% 5%; /* #0B0E12 */
+    --background: 210 40% 5%;
+    /* #0B0E12 */
     --foreground: 210 40% 98%;
 
-    --card: 213 36% 11%; /* #11161C */
+    --card: 213 36% 11%;
+    /* #11161C */
     --card-foreground: 210 40% 98%;
 
     --popover: 213 36% 11%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 14 100% 57%; /* #FF5722 */
+    --primary: 14 100% 57%;
+    /* #FF5722 */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 28% 15%; /* #1E2630 */
+    --secondary: 210 28% 15%;
+    /* #1E2630 */
     --secondary-foreground: 210 40% 98%;
 
     --muted: 220 9% 46%;
@@ -86,7 +104,8 @@ All colors MUST be HSL.
     --success: 142 71% 45%;
     --warning: 38 92% 50%;
 
-    --border: 210 28% 15%; /* #1E2630 */
+    --border: 210 28% 15%;
+    /* #1E2630 */
     --input: 210 28% 15%;
     --ring: 14 100% 57%;
 
@@ -111,4 +130,22 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes ring-pulse {
+  0% {
+    box-shadow: 0 0 0 0 hsl(14 100% 57% / 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px hsl(14 100% 57% / 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 hsl(14 100% 57% / 0);
+  }
+}
+
+.animate-ring-pulse {
+  animation: ring-pulse 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }

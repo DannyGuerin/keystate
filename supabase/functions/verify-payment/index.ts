@@ -25,7 +25,7 @@ serve(async (req) => {
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     const { sessionId } = await req.json();
@@ -56,8 +56,8 @@ serve(async (req) => {
       .from("orders")
       .update({
         status: "paid",
-        stripe_payment_intent_id: typeof session.payment_intent === 'string' 
-          ? session.payment_intent 
+        stripe_payment_intent_id: typeof session.payment_intent === 'string'
+          ? session.payment_intent
           : session.payment_intent?.id,
         shipping_name: shippingDetails?.name || null,
         shipping_address_line1: shippingDetails?.address?.line1 || null,
@@ -95,9 +95,9 @@ serve(async (req) => {
 
     logStep("Order updated successfully", { orderId });
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      order 
+    return new Response(JSON.stringify({
+      success: true,
+      order
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

@@ -157,7 +157,7 @@ export default function LeadForm() {
                     <FormItem>
                       <FormLabel>Message / Requirements</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Tell us about your keyring needs..."
                           className="min-h-[120px]"
                           {...field}
