@@ -156,7 +156,7 @@ const Order = () => {
         variantId: selectedVariant,
         quantity,
         paymentMode,
-        priceId: pricingTier.priceId,
+        unitPrice: pricingTier.unitPrice,
       });
 
       // Create order and checkout session via edge function
@@ -167,7 +167,7 @@ const Order = () => {
             items: [{
               variantId: selectedVariant,
               quantity,
-              priceId: pricingTier.priceId
+              unitPrice: pricingTier.unitPrice
             }],
             customerName: name,
             customerEmail: email,
@@ -175,6 +175,10 @@ const Order = () => {
             campaignId: campaign.id,
             mode: paymentMode === 'one-off' ? 'payment' : 'subscription',
             promoCode: promoCode || null,
+            shippingName: shippingName,
+            shippingAddress: shippingAddress,
+            shippingPostcode: shippingPostcode,
+            shippingContact: shippingContact,
           },
         }
       );

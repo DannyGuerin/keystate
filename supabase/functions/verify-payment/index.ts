@@ -65,18 +65,23 @@ serve(async (req: Request) => {
     if (!orderId) throw new Error("Order ID not found in session");
 
     // Update order with payment confirmation and shipping details
+    const updatePayload: Record<string, unknown> = {
+      status: "paid",
+      stripe_payment_intent_id: paymentIntentId,
+    };
+
+    if (shippingDetails) {
+      updatePayload.shipping_name = shippingDetails.name || null;
+      updatePayload.shipping_address_line1 = shippingDetails.address?.line1 || null;
+      updatePayload.shipping_address_line2 = shippingDetails.address?.line2 || null;
+      updatePayload.shipping_city = shippingDetails.address?.city || null;
+      updatePayload.shipping_postal_code = shippingDetails.address?.postal_code || null;
+      updatePayload.shipping_country = shippingDetails.address?.country || null;
+    }
+
     const { error: updateError } = await supabaseClient
       .from("orders")
-      .update({
-        status: "paid",
-        stripe_payment_intent_id: paymentIntentId,
-        shipping_name: shippingDetails?.name || null,
-        shipping_address_line1: shippingDetails?.address?.line1 || null,
-        shipping_address_line2: shippingDetails?.address?.line2 || null,
-        shipping_city: shippingDetails?.address?.city || null,
-        shipping_postal_code: shippingDetails?.address?.postal_code || null,
-        shipping_country: shippingDetails?.address?.country || null,
-      })
+      .update(updatePayload)
       .eq("id", orderId);
 
     if (updateError) {

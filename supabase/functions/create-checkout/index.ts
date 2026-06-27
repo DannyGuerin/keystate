@@ -15,7 +15,7 @@ const logStep = (step: string, details?: any) => {
 type CheckoutItem = {
   variantId: string;
   quantity: number;
-  priceId: string; // Stripe Price ID from frontend pricing config
+  unitPrice: number; // price per keyring in pounds, e.g. 0.95
 };
 
 type CheckoutPayload = {
@@ -26,6 +26,10 @@ type CheckoutPayload = {
   customerEmail: string;
   customerPhone?: string;
   campaignId: string;
+  shippingName?: string;
+  shippingAddress?: string;
+  shippingPostcode?: string;
+  shippingContact?: string;
 };
 
 serve(async (req) => {
@@ -96,10 +100,10 @@ serve(async (req) => {
       );
     }
 
-    // VALIDATION & BUILD: Validate each item and build line_items for Stripe
-    const line_items: Array<{ price: string; quantity: number }> = [];
+    // VALIDATION & BUILD: Validate each item
     const variantIds: string[] = [];
     const quantities: number[] = [];
+    const allowedQuantities = [10, 25, 50, 100, 250];
 
     for (const item of payload.items) {
       // Check variantId exists
@@ -110,48 +114,40 @@ serve(async (req) => {
         );
       }
 
-      // Check priceId exists
-      if (!item.priceId || typeof item.priceId !== 'string') {
+      // Check unitPrice is a positive number
+      if (typeof item.unitPrice !== 'number' || item.unitPrice <= 0) {
         return new Response(
-          JSON.stringify({ error: "Each item must have a valid priceId" }),
+          JSON.stringify({ error: "Each item must have a valid unitPrice (positive number)" }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      // Validate and clamp quantity (integer >= 10, capped at 250)
+      // Validate quantity is one of the allowed tiers
       const rawQuantity = item.quantity;
-      if (!Number.isInteger(rawQuantity) || rawQuantity < 10 || rawQuantity > 250) {
+      if (!allowedQuantities.includes(rawQuantity)) {
         logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: rawQuantity });
         return new Response(
-          JSON.stringify({ 
-            error: `Quantity must be an integer between 10 and 250. Got: ${rawQuantity}` 
+          JSON.stringify({
+            error: `Quantity must be one of ${allowedQuantities.join(', ')}. Got: ${rawQuantity}`
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
       }
 
-      const clampedQuantity = Math.min(Math.max(10, rawQuantity | 0), 250);
-
-      // Use quantity of 1 for Stripe since the priceId already contains the tier pricing
-      line_items.push({
-        price: item.priceId,
-        quantity: 1,
-      });
-
       variantIds.push(item.variantId);
-      quantities.push(clampedQuantity);
+      quantities.push(rawQuantity);
     }
 
     const mode = payload.mode || 'payment';
     const paymentMode = mode === 'payment' ? 'one-off' : 'subscription';
     const totalQuantity = quantities.reduce((sum, q) => sum + q, 0);
     
-    logStep("Line items summary", { 
-      count: line_items.length, 
+    logStep("Line items summary", {
+      count: payload.items.length,
       variantIds,
       quantities,
       totalQuantity,
-      mode 
+      mode
     });
 
     // Fetch campaign details for checkout metadata
@@ -171,6 +167,7 @@ serve(async (req) => {
 
     // Create order record (using first item for now - multi-item support can be added later)
     const firstItem = payload.items[0];
+    const totalAmount = payload.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
     const { data: order, error: orderError } = await supabaseClient
       .from("orders")
       .insert([{
@@ -183,6 +180,11 @@ serve(async (req) => {
         payment_mode: paymentMode as 'one-off' | 'subscription',
         promo_code: payload.promoCode || null,
         status: "pending_payment" as const,
+        total_amount: totalAmount,
+        shipping_name: payload.shippingName || null,
+        shipping_address_line1: payload.shippingAddress || null,
+        shipping_postal_code: payload.shippingPostcode || null,
+        notes: payload.shippingContact ? `Contact: ${payload.shippingContact}` : null,
       }])
       .select()
       .single();
@@ -213,10 +215,15 @@ serve(async (req) => {
     params.set('customer_email', payload.customerEmail);
     params.set('allow_promotion_codes', 'true');
 
-    // Add line items
-    line_items.forEach((li, i) => {
-      params.set(`line_items[${i}][price]`, li.price);
-      params.set(`line_items[${i}][quantity]`, String(li.quantity));
+    // Add line items using price_data (computed inline, no hardcoded Price IDs)
+    payload.items.forEach((item, i) => {
+      params.set(`line_items[${i}][price_data][currency]`, "gbp");
+      params.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(item.unitPrice * item.quantity * 100)));
+      params.set(`line_items[${i}][price_data][product_data][name]`, `Keyring Order - ${item.quantity} units`);
+      params.set(`line_items[${i}][quantity]`, "1");
+      if (mode === "subscription") {
+        params.set(`line_items[${i}][price_data][recurring][interval]`, "month");
+      }
     });
 
     // Add shipping address collection

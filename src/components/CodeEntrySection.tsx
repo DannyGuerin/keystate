@@ -30,14 +30,11 @@ export default function CodeEntrySection() {
 
     try {
       const { data, error } = await supabase
-        .from("campaigns")
-        .select("unique_code, status")
-        .eq("unique_code", cleanCode)
-        .maybeSingle();
+        .rpc("get_campaign_for_order", { campaign_code: cleanCode });
 
       if (error) throw error;
 
-      if (!data || data.status !== "active") {
+      if (!data || data.length === 0 || data[0].status !== "active") {
         toast({
           title: "Invalid Code",
           description: "This campaign code is invalid or no longer active.",
