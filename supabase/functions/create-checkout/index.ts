@@ -168,6 +168,9 @@ serve(async (req) => {
     // Create order record (using first item for now - multi-item support can be added later)
     const firstItem = payload.items[0];
     const totalAmount = payload.items.reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
+    const nextDueDate = paymentMode === 'subscription'
+      ? (() => { const d = new Date(); d.setMonth(d.getMonth() + 1); return d.toISOString().split('T')[0]; })()
+      : null;
     const { data: order, error: orderError } = await supabaseClient
       .from("orders")
       .insert([{
@@ -185,6 +188,7 @@ serve(async (req) => {
         shipping_address_line1: payload.shippingAddress || null,
         shipping_postal_code: payload.shippingPostcode || null,
         notes: payload.shippingContact ? `Contact: ${payload.shippingContact}` : null,
+        next_due_date: nextDueDate,
       }])
       .select()
       .single();
