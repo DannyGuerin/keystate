@@ -139,8 +139,11 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone: string | null
+          fulfillment_status: Database["public"]["Enums"]["fulfillment_status"]
           id: string
           keyring_variant_id: string | null
+          last_shipped_date: string | null
+          next_due_date: string | null
           notes: string | null
           order_date: string
           payment_mode: Database["public"]["Enums"]["payment_mode"]
@@ -162,8 +165,11 @@ export type Database = {
           customer_email: string
           customer_name: string
           customer_phone?: string | null
+          fulfillment_status?: Database["public"]["Enums"]["fulfillment_status"]
           id?: string
           keyring_variant_id?: string | null
+          last_shipped_date?: string | null
+          next_due_date?: string | null
           notes?: string | null
           order_date?: string
           payment_mode: Database["public"]["Enums"]["payment_mode"]
@@ -185,8 +191,11 @@ export type Database = {
           customer_email?: string
           customer_name?: string
           customer_phone?: string | null
+          fulfillment_status?: Database["public"]["Enums"]["fulfillment_status"]
           id?: string
           keyring_variant_id?: string | null
+          last_shipped_date?: string | null
+          next_due_date?: string | null
           notes?: string | null
           order_date?: string
           payment_mode?: Database["public"]["Enums"]["payment_mode"]
@@ -273,6 +282,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "user"
       campaign_status: "draft" | "active" | "paused" | "completed"
+      fulfillment_status: "pending" | "shipped" | "done"
       lead_status: "new" | "contacted" | "converted" | "closed"
       order_status:
         | "pending"

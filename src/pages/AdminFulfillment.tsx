@@ -25,6 +25,7 @@ interface Order {
   shipping_postal_code: string | null;
   fulfillment_status: FulfillmentStatus;
   next_due_date: string | null;
+  last_shipped_date: string | null;
   campaigns: { company_name: string };
   keyring_variants: { type: string; color: string } | null;
 }
@@ -66,6 +67,7 @@ const AdminFulfillment = () => {
         shipping_postal_code,
         fulfillment_status,
         next_due_date,
+        last_shipped_date,
         campaigns (company_name),
         keyring_variants (type, color)
       `)
@@ -90,8 +92,9 @@ const AdminFulfillment = () => {
       ? addOneMonth(order.next_due_date)
       : undefined;
 
+    const today = new Date().toISOString().split("T")[0];
     const updatePayload: Record<string, unknown> = rollForward
-      ? { fulfillment_status: "pending", next_due_date: newDueDate }
+      ? { fulfillment_status: "pending", next_due_date: newDueDate, last_shipped_date: today }
       : { fulfillment_status: newStatus };
 
     const { error } = await supabase
@@ -111,6 +114,7 @@ const AdminFulfillment = () => {
               ...o,
               fulfillment_status: (updatePayload.fulfillment_status as FulfillmentStatus),
               ...(newDueDate !== undefined ? { next_due_date: newDueDate } : {}),
+              ...(rollForward ? { last_shipped_date: today } : {}),
             }
           : o
       )
@@ -241,6 +245,11 @@ const AdminFulfillment = () => {
                             <SelectItem value="done">Done</SelectItem>
                           </SelectContent>
                         </Select>
+                        {order.last_shipped_date && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Last shipped: {formatDate(order.last_shipped_date)}
+                          </p>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
