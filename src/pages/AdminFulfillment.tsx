@@ -26,6 +26,7 @@ interface Order {
   fulfillment_status: FulfillmentStatus;
   next_due_date: string | null;
   last_shipped_date: string | null;
+  invoice_url: string | null;
   campaigns: { company_name: string };
   keyring_variants: { type: string; color: string } | null;
 }
@@ -68,6 +69,7 @@ const AdminFulfillment = () => {
         fulfillment_status,
         next_due_date,
         last_shipped_date,
+        invoice_url,
         campaigns (company_name),
         keyring_variants (type, color)
       `)
@@ -196,6 +198,7 @@ const AdminFulfillment = () => {
                     <TableHead>Payment</TableHead>
                     <TableHead>Next Due</TableHead>
                     <TableHead>Amount</TableHead>
+                    <TableHead>Invoice</TableHead>
                     <TableHead>Shipping Address</TableHead>
                     <TableHead>Fulfillment</TableHead>
                   </TableRow>
@@ -227,6 +230,11 @@ const AdminFulfillment = () => {
                       </TableCell>
                       <TableCell className="font-medium">
                         {order.total_amount ? `£${order.total_amount.toFixed(2)}` : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {order.invoice_url
+                          ? <a href={order.invoice_url} target="_blank" rel="noreferrer" className="text-primary hover:underline text-sm">View</a>
+                          : "—"}
                       </TableCell>
                       <TableCell className="text-sm max-w-[200px]">
                         {formatShippingAddress(order)}

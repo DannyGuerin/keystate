@@ -74,6 +74,22 @@ serve(async (req) => {
         );
       }
 
+      // Fetch hosted invoice URL for subscription payments
+      let invoiceUrl: string | null = null;
+      if (session.invoice && typeof session.invoice === "string") {
+        const invoiceRes = await fetch(`https://api.stripe.com/v1/invoices/${session.invoice}`, {
+          headers: { Authorization: `Bearer ${stripeSecretKey}` },
+        });
+        if (invoiceRes.ok) {
+          const invoiceObj = await invoiceRes.json();
+          invoiceUrl = invoiceObj.hosted_invoice_url || null;
+        } else {
+          console.warn(`⚠️ Could not fetch invoice ${session.invoice}: ${invoiceRes.status}`);
+        }
+      } else {
+        // TODO: for one-off payments, retrieve receipt_url by expanding payment_intent on the session
+      }
+
       // Update order in Supabase
       const supabaseClient = createClient(
         Deno.env.get("SUPABASE_URL") ?? "",
@@ -82,10 +98,11 @@ serve(async (req) => {
 
       const { error: updateError } = await supabaseClient
         .from("orders")
-        .update({ 
+        .update({
           status: "paid",
           stripe_session_id: session.id,
           stripe_payment_intent_id: session.payment_intent as string || null,
+          invoice_url: invoiceUrl,
         })
         .eq("id", orderId);
 
@@ -143,6 +160,7 @@ serve(async (req) => {
                 fulfillment_status: "pending",
                 next_due_date: newDueDate,
                 last_shipped_date: today,
+                invoice_url: invoice.hosted_invoice_url || null,
               })
               .eq("id", order.id);
 

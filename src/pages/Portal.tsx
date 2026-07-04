@@ -40,6 +40,7 @@ interface PortalOrder {
   fulfillment_status: FulfillmentStatus;
   next_due_date: string | null;
   last_shipped_date: string | null;
+  invoice_url: string | null;
   campaigns: { company_name: string; logo_url: string | null } | null;
   keyring_variants: { type: string; color: string } | null;
 }
@@ -212,6 +213,12 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
             <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${FULFILLMENT_CLASS[order.fulfillment_status]}`}>
               {FULFILLMENT_LABEL[order.fulfillment_status]}
             </span>
+          </div>
+          <div>
+            <p className="text-muted-foreground text-xs mb-1">Invoice</p>
+            {order.invoice_url
+              ? <a href={order.invoice_url} target="_blank" rel="noreferrer" className="text-sm font-medium text-primary hover:underline">Download Invoice</a>
+              : <p className="font-medium">—</p>}
           </div>
         </div>
 
@@ -403,6 +410,7 @@ const Portal = () => {
         fulfillment_status,
         next_due_date,
         last_shipped_date,
+        invoice_url,
         campaigns (company_name, logo_url),
         keyring_variants (type, color)
       `)

@@ -141,6 +141,7 @@ export type Database = {
           customer_phone: string | null
           fulfillment_status: Database["public"]["Enums"]["fulfillment_status"]
           id: string
+          invoice_url: string | null
           keyring_variant_id: string | null
           last_shipped_date: string | null
           next_due_date: string | null
@@ -167,6 +168,7 @@ export type Database = {
           customer_phone?: string | null
           fulfillment_status?: Database["public"]["Enums"]["fulfillment_status"]
           id?: string
+          invoice_url?: string | null
           keyring_variant_id?: string | null
           last_shipped_date?: string | null
           next_due_date?: string | null
@@ -193,6 +195,7 @@ export type Database = {
           customer_phone?: string | null
           fulfillment_status?: Database["public"]["Enums"]["fulfillment_status"]
           id?: string
+          invoice_url?: string | null
           keyring_variant_id?: string | null
           last_shipped_date?: string | null
           next_due_date?: string | null
