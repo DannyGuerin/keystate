@@ -438,9 +438,10 @@ const Portal = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    setOrders([]);
-    setLoginSent(false);
-    setLoginEmail("");
+    Object.keys(localStorage)
+      .filter(key => key.startsWith('sb-') && key.endsWith('-auth-token'))
+      .forEach(key => localStorage.removeItem(key));
+    window.location.href = '/portal';
   };
 
   if (authLoading) {
