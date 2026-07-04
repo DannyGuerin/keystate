@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Package, Mail, Loader2 } from "lucide-react";
@@ -194,6 +195,12 @@ const ThankYou = () => {
               <a href="mailto:hello@keystate.com" className="text-primary hover:underline">
                 hello@keystate.com
               </a>
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Manage your order anytime in your{" "}
+              <Link to="/portal" className="text-primary hover:underline">
+                client portal
+              </Link>
             </p>
           </div>
         </div>

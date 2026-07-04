@@ -10,6 +10,7 @@ import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import AdminCampaigns from "./pages/AdminCampaigns";
 import AdminFulfillment from "./pages/AdminFulfillment";
+import Portal from "./pages/Portal";
 import CampaignBuilder from "./pages/CampaignBuilder";
 import Order from "./pages/Order";
 import NotFound from "./pages/NotFound";
@@ -32,6 +33,7 @@ const App = () => (
           <Route path="/admin/campaigns/new" element={<CampaignBuilder />} />
           <Route path="/admin/campaigns/:id" element={<CampaignBuilder />} />
           <Route path="/order/:code" element={<Order />} />
+          <Route path="/portal" element={<Portal />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

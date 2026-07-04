@@ -292,6 +292,7 @@ export type Database = {
         | "delivered"
         | "pending_payment"
         | "paid"
+        | "cancelled"
       payment_mode: "one-off" | "subscription"
     }
     CompositeTypes: {
