@@ -1,6 +1,16 @@
+// Handled Stripe events (must be enabled in Stripe webhook config):
+//   - checkout.session.completed
+//   - invoice.payment_succeeded
+
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+
+const addOneMonth = (dateStr: string): string => {
+  const date = new Date(dateStr + "T00:00:00");
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().split("T")[0];
+};
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -88,6 +98,63 @@ serve(async (req) => {
       }
 
       console.log(`✅ Payment confirmed for order ${orderId} (session ${session.id})`);
+
+    // Handle invoice.payment_succeeded — subscription renewal
+    } else if (event.type === "invoice.payment_succeeded") {
+      const invoice = event.data.object as Stripe.Invoice;
+
+      // Only handle recurring renewals; first payment is covered by checkout.session.completed
+      if (invoice.billing_reason !== "subscription_cycle") {
+        console.log(`ℹ️ Skipping invoice.payment_succeeded (billing_reason: ${invoice.billing_reason})`);
+      } else {
+        const customerEmail = invoice.customer_email;
+        console.log(`🔄 Processing subscription renewal for ${customerEmail}`);
+
+        if (!customerEmail) {
+          console.warn(`⚠️ No customer_email on invoice ${invoice.id} — skipping`);
+        } else {
+          const supabaseClient = createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+          );
+
+          // Find the most recent paid subscription order for this customer
+          const { data: orders, error: fetchError } = await supabaseClient
+            .from("orders")
+            .select("id, next_due_date")
+            .eq("customer_email", customerEmail)
+            .eq("payment_mode", "subscription")
+            .eq("status", "paid")
+            .not("stripe_payment_intent_id", "is", null)
+            .order("order_date", { ascending: false })
+            .limit(1);
+
+          if (fetchError || !orders || orders.length === 0) {
+            console.warn(`⚠️ No matching subscription order found for ${customerEmail}`);
+          } else {
+            const order = orders[0];
+            const currentDueDate = order.next_due_date ?? new Date().toISOString().split("T")[0];
+            const newDueDate = addOneMonth(currentDueDate);
+            const today = new Date().toISOString().split("T")[0];
+
+            const { error: updateError } = await supabaseClient
+              .from("orders")
+              .update({
+                fulfillment_status: "pending",
+                next_due_date: newDueDate,
+                last_shipped_date: today,
+              })
+              .eq("id", order.id);
+
+            if (updateError) {
+              console.error(`❌ Failed to reset order ${order.id} for renewal:`, updateError);
+            } else {
+              console.log(`✅ Subscription renewed for order ${order.id} — next due ${newDueDate}`);
+            }
+          }
+        }
+      }
+
     } else {
       console.log(`ℹ️ Unhandled event type: ${event.type}`);
     }
