@@ -192,8 +192,8 @@ const ThankYou = () => {
             </Button>
             <p className="text-sm text-muted-foreground">
               Need help? Contact us at{" "}
-              <a href="mailto:hello@keystate.com" className="text-primary hover:underline">
-                hello@keystate.com
+              <a href="mailto:hello.keystate@gmail.com" className="text-primary hover:underline">
+                hello.keystate@gmail.com
               </a>
             </p>
             <p className="text-sm text-muted-foreground">
