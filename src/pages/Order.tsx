@@ -5,15 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { KeyringTypeCard } from "@/components/KeyringTypeCard";
 import { StepProgress } from "@/components/StepProgress";
 import { OrderSummary } from "@/components/OrderSummary";
 import { Loader2, Check } from "lucide-react";
-import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
+import { getVolumePricing, formatPrice } from "@/config/pricing";
 import keystateLogo from "@/assets/keystate-logo.png";
 
 interface Campaign {
@@ -22,7 +20,6 @@ interface Campaign {
   company_address: string | null;
   company_postcode: string | null;
   status: string;
-  logo_url: string | null;
   logo_url: string | null;
   contact_person: string | null;
   contact_email: string | null;
@@ -49,11 +46,10 @@ const Order = () => {
 
   // Form state
   const [step, setStep] = useState(1);
-  const [selectedVariant, setSelectedVariant] = useState("");
+  const [selectedItems, setSelectedItems] = useState<{ keyringId: string; quantity: number }[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [quantity, setQuantity] = useState(10);
   const [paymentMode, setPaymentMode] = useState<"one-off" | "subscription">("subscription");
   const [promoCode, setPromoCode] = useState("");
 
@@ -72,11 +68,31 @@ const Order = () => {
 
   // Auto-select when only one variant is available
   useEffect(() => {
-    if (variants.length === 1 && !selectedVariant) {
-      setSelectedVariant(variants[0].id);
+    if (variants.length === 1 && selectedItems.length === 0) {
+      setSelectedItems([{ keyringId: variants[0].id, quantity: 1 }]);
       if (step === 1) setStep(2);
     }
-  }, [variants, selectedVariant, step]);
+  }, [variants, selectedItems, step]);
+
+  const toggleVariant = (variantId: string) => {
+    setSelectedItems((prev) => {
+      const exists = prev.some((item) => item.keyringId === variantId);
+      if (exists) {
+        return prev.filter((item) => item.keyringId !== variantId);
+      }
+      return [...prev, { keyringId: variantId, quantity: 1 }];
+    });
+  };
+
+  const updateVariantQuantity = (variantId: string, quantity: number) => {
+    const safeQuantity = Number.isInteger(quantity) && quantity >= 1 ? quantity : 1;
+    setSelectedItems((prev) =>
+      prev.map((item) => (item.keyringId === variantId ? { ...item, quantity: safeQuantity } : item))
+    );
+  };
+
+  const totalQuantity = selectedItems.reduce((sum, item) => sum + item.quantity, 0);
+  const volumePricing = getVolumePricing(totalQuantity, paymentMode);
 
   const fetchCampaign = async () => {
     console.log("Fetching campaign with code:", code);
@@ -127,10 +143,18 @@ const Order = () => {
   };
 
   const handleSubmit = async () => {
-    if (!campaign || !selectedVariant || !name || !email || !quantity) {
+    const hasInvalidQuantity = selectedItems.some(
+      (item) => !Number.isInteger(item.quantity) || item.quantity < 1
+    );
+
+    if (!campaign || selectedItems.length === 0 || !name || !email || hasInvalidQuantity) {
       toast({
         title: "Missing information",
-        description: "Please fill in all required fields",
+        description: selectedItems.length === 0
+          ? "Please select at least one keyring"
+          : hasInvalidQuantity
+            ? "Quantities must be whole numbers of 1 or more"
+            : "Please fill in all required fields",
         variant: "destructive",
       });
       return;
@@ -139,12 +163,12 @@ const Order = () => {
     setSubmitting(true);
 
     try {
-      // Get the correct pricing tier
-      const pricingTier = getPricingTier(quantity, paymentMode === 'one-off' ? 'one-off' : 'subscription');
-      if (!pricingTier) {
+      // Blended unit price from the volume-discount tier the combined quantity qualifies for
+      const pricing = getVolumePricing(totalQuantity, paymentMode);
+      if (!pricing) {
         toast({
           title: "Invalid quantity",
-          description: "Please select a valid quantity tier",
+          description: "Please select at least one keyring with a valid quantity",
           variant: "destructive",
         });
         setSubmitting(false);
@@ -153,10 +177,9 @@ const Order = () => {
 
       console.log("Creating checkout session with:", {
         campaignId: campaign.id,
-        variantId: selectedVariant,
-        quantity,
+        items: selectedItems,
         paymentMode,
-        unitPrice: pricingTier.unitPrice,
+        unitPrice: pricing.unitPrice,
       });
 
       // Create order and checkout session via edge function
@@ -164,11 +187,11 @@ const Order = () => {
         "create-checkout",
         {
           body: {
-            items: [{
-              variantId: selectedVariant,
-              quantity,
-              unitPrice: pricingTier.unitPrice
-            }],
+            items: selectedItems.map((item) => ({
+              variantId: item.keyringId,
+              quantity: item.quantity,
+              unitPrice: pricing.unitPrice,
+            })),
             customerName: name,
             customerEmail: email,
             customerPhone: phone || null,
@@ -241,7 +264,12 @@ const Order = () => {
     );
   }
 
-  const selectedVariantData = variants.find(v => v.id === selectedVariant);
+  const selectedVariantDetails = selectedItems
+    .map((item) => {
+      const variant = variants.find((v) => v.id === item.keyringId);
+      return variant ? { ...variant, quantity: item.quantity } : null;
+    })
+    .filter((v): v is KeyringVariant & { quantity: number } => v !== null);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-secondary/5">
@@ -297,9 +325,12 @@ const Order = () => {
               <Card>
                 <CardContent className="pt-6 space-y-4">
                   <div>
-                    <h3 className="text-lg font-heading font-semibold mb-4">
+                    <h3 className="text-lg font-heading font-semibold mb-1">
                       Select Your Keyring
                     </h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Choose as many designs as you like and set a quantity for each.
+                    </p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       {variants.length === 0 ? (
                         <div className="col-span-2 text-center py-8">
@@ -308,26 +339,38 @@ const Order = () => {
                           </p>
                         </div>
                       ) : (
-                        variants.map((variant) => (
-                          <KeyringTypeCard
-                            key={variant.id}
-                            id={variant.id}
-                            label={variant.type}
-                            description={variant.color}
-                            imageUrl={variant.image_url}
-                            selected={selectedVariant === variant.id}
-                            onSelect={() => {
-                              setSelectedVariant(variant.id);
-                              if (step === 1) setStep(2);
-                            }}
-                          />
-                        ))
+                        variants.map((variant) => {
+                          const selectedItem = selectedItems.find((item) => item.keyringId === variant.id);
+                          return (
+                            <KeyringTypeCard
+                              key={variant.id}
+                              id={variant.id}
+                              label={variant.type}
+                              description={variant.color}
+                              imageUrl={variant.image_url}
+                              selected={!!selectedItem}
+                              quantity={selectedItem?.quantity ?? 1}
+                              onToggle={() => toggleVariant(variant.id)}
+                              onQuantityChange={(quantity) => updateVariantQuantity(variant.id, quantity)}
+                            />
+                          );
+                        })
                       )}
                     </div>
                     {variants.length === 1 && (
                       <p className="text-xs text-muted-foreground text-center mt-2">
                         Only option available for this campaign
                       </p>
+                    )}
+                    {step === 1 && (
+                      <Button
+                        type="button"
+                        className="w-full mt-6"
+                        disabled={selectedItems.length === 0}
+                        onClick={() => setStep(2)}
+                      >
+                        Continue to Order Details
+                      </Button>
                     )}
                   </div>
                 </CardContent>
@@ -503,97 +546,55 @@ const Order = () => {
                       </div>
                     </div>
 
-                    {/* Quantity Selection - Radio Button Grid */}
+                    {/* Selected Keyrings & Quantities */}
                     <div className="space-y-3">
-                      <Label>Select Quantity</Label>
-                      <RadioGroup
-                        value={quantity.toString()}
-                        onValueChange={(value) => setQuantity(parseInt(value))}
-                        className="grid grid-cols-1 sm:grid-cols-2 gap-3"
-                      >
-                        {(paymentMode === "subscription"
-                          ? PRICING_CONFIG.subscription
-                          : PRICING_CONFIG.oneOff
-                        ).map((tier) => {
-                          const isSelected = quantity === tier.quantity;
-
-                          return (
-                            <label
-                              key={tier.quantity}
-                              htmlFor={`quantity-${tier.quantity}`}
-                              className={`
-                              relative flex cursor-pointer rounded-lg border-2 p-4 transition-all
-                              ${isSelected
-                                  ? 'border-primary bg-primary/5 shadow-md'
-                                  : 'border-border hover:border-primary/50 hover:bg-accent/30'
-                                }
-                            `}
-                            >
-                              <RadioGroupItem
-                                value={tier.quantity.toString()}
-                                id={`quantity-${tier.quantity}`}
-                                className="sr-only"
-                              />
-
-                              <div className="flex-1 space-y-1">
-                                {/* Quantity Heading */}
-                                <div className="flex items-center justify-between">
-                                  <span className="font-semibold text-base">
-                                    {tier.quantity} {paymentMode === "subscription" ? "per month" : "units"}
-                                  </span>
-                                  {tier.isPopular && (
-                                    <Badge variant="secondary" className="text-xs">
-                                      POPULAR
-                                    </Badge>
-                                  )}
-                                  {tier.isBestValue && (
-                                    <Badge variant="default" className="text-xs">
-                                      BEST VALUE
-                                    </Badge>
-                                  )}
-                                </div>
-
-                                {/* Pricing Display */}
-                                <div className="text-sm">
-                                  <span className="font-bold text-lg">
-                                    {formatPrice(tier.total)}
-                                  </span>
-                                  {paymentMode === "subscription" && (
-                                    <span className="text-muted-foreground">/mo</span>
-                                  )}
-                                </div>
-
-                                {/* Unit Price */}
-                                <div className="text-xs text-muted-foreground">
-                                  {formatPrice(tier.unitPrice)} per keyring
-                                </div>
-
-                                {/* Savings Badge (only if discount > 0) */}
-                                {(tier.discount ?? 0) > 0 && (
-                                  <div className="text-xs font-medium text-green-600 dark:text-green-400">
-                                    Save {tier.discount}%
-                                  </div>
-                                )}
+                      <Label>Your Keyrings</Label>
+                      {selectedVariantDetails.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No keyrings selected yet — go back to step 1 to choose at least one.
+                        </p>
+                      ) : (
+                        <div className="rounded-lg border divide-y">
+                          {selectedVariantDetails.map((variant) => (
+                            <div key={variant.id} className="flex items-center justify-between px-4 py-3">
+                              <div>
+                                <p className="text-sm font-medium">{variant.type}</p>
+                                <p className="text-xs text-muted-foreground">{variant.color}</p>
                               </div>
+                              <span className="text-sm font-medium">
+                                {variant.quantity} {paymentMode === "subscription" ? "/mo" : "units"}
+                              </span>
+                            </div>
+                          ))}
+                          <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+                            <span className="text-sm font-semibold">Total Quantity</span>
+                            <span className="text-sm font-semibold">
+                              {totalQuantity} {paymentMode === "subscription" ? "/mo" : "units"}
+                            </span>
+                          </div>
+                        </div>
+                      )}
 
-                              {/* Selection Indicator */}
-                              {isSelected && (
-                                <div className="absolute top-2 right-2">
-                                  <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                                    <svg
-                                      className="h-3 w-3 text-white"
-                                      fill="currentColor"
-                                      viewBox="0 0 12 12"
-                                    >
-                                      <path d="M10 3L4.5 8.5 2 6" stroke="currentColor" strokeWidth="2" fill="none" />
-                                    </svg>
-                                  </div>
-                                </div>
+                      {volumePricing && (
+                        <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-1">
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold text-base">
+                              {formatPrice(volumePricing.total)}
+                              {paymentMode === "subscription" && (
+                                <span className="text-muted-foreground font-normal">/mo</span>
                               )}
-                            </label>
-                          );
-                        })}
-                      </RadioGroup>
+                            </span>
+                            {volumePricing.discount > 0 && (
+                              <Badge variant="default" className="text-xs">
+                                Save {volumePricing.discount}%
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            {formatPrice(volumePricing.unitPrice)} per keyring · bulk pricing unlocked at {volumePricing.tierQuantity}+ units
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     {/* Promo Code (Optional) */}
@@ -675,12 +676,12 @@ const Order = () => {
           {/* Order Summary Sidebar */}
           <div className="lg:sticky lg:top-24 h-fit">
             <OrderSummary
-              formData={{
-                keyringType: selectedVariantData?.type || "",
-                color: selectedVariantData?.color || "",
-                quantity: quantity,
-                paymentMode: paymentMode,
-              }}
+              items={selectedVariantDetails.map((variant) => ({
+                label: variant.type,
+                description: variant.color,
+                quantity: variant.quantity,
+              }))}
+              paymentMode={paymentMode}
             />
           </div>
         </div>

@@ -238,8 +238,12 @@ const Index = () => {
                           label={type.label}
                           description={type.description}
                           selected={formData.keyringType === type.id}
-                          onSelect={() =>
+                          quantity={formData.quantity}
+                          onToggle={() =>
                             setFormData({ ...formData, keyringType: type.id })
+                          }
+                          onQuantityChange={(quantity) =>
+                            setFormData({ ...formData, quantity })
                           }
                         />
                       ))}
@@ -401,13 +405,19 @@ const Index = () => {
 
           {/* Order Summary Sidebar */}
           <aside className="hidden lg:block">
-            <OrderSummary formData={formData} />
+            <OrderSummary
+              items={formData.keyringType ? [{ label: formData.keyringType, description: formData.color, quantity: formData.quantity }] : []}
+              paymentMode={formData.paymentMode}
+            />
           </aside>
         </div>
 
         {/* Mobile Order Summary */}
         <div className="lg:hidden mt-8 max-w-6xl mx-auto">
-          <OrderSummary formData={formData} />
+          <OrderSummary
+            items={formData.keyringType ? [{ label: formData.keyringType, description: formData.color, quantity: formData.quantity }] : []}
+            paymentMode={formData.paymentMode}
+          />
         </div>
       </main>
     </div>

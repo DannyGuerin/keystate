@@ -133,6 +133,54 @@ export type Database = {
         }
         Relationships: []
       }
+      order_items: {
+        Row: {
+          created_at: string
+          id: string
+          keyring_variant_id: string | null
+          order_id: string
+          pending_quantity: number | null
+          quantity: number
+          stripe_subscription_item_id: string | null
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          keyring_variant_id?: string | null
+          order_id: string
+          pending_quantity?: number | null
+          quantity: number
+          stripe_subscription_item_id?: string | null
+          unit_price: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          keyring_variant_id?: string | null
+          order_id?: string
+          pending_quantity?: number | null
+          quantity?: number
+          stripe_subscription_item_id?: string | null
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_keyring_variant_id_fkey"
+            columns: ["keyring_variant_id"]
+            isOneToOne: false
+            referencedRelation: "keyring_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           campaign_id: string
@@ -148,6 +196,8 @@ export type Database = {
           notes: string | null
           order_date: string
           payment_mode: Database["public"]["Enums"]["payment_mode"]
+          pending_effective_date: string | null
+          pending_total_amount: number | null
           promo_code: string | null
           quantity: number
           shipping_address_line1: string | null
@@ -159,6 +209,8 @@ export type Database = {
           status: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent_id: string | null
           stripe_session_id: string | null
+          stripe_subscription_id: string | null
+          stripe_subscription_schedule_id: string | null
           total_amount: number | null
         }
         Insert: {
@@ -175,6 +227,8 @@ export type Database = {
           notes?: string | null
           order_date?: string
           payment_mode: Database["public"]["Enums"]["payment_mode"]
+          pending_effective_date?: string | null
+          pending_total_amount?: number | null
           promo_code?: string | null
           quantity: number
           shipping_address_line1?: string | null
@@ -186,6 +240,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_schedule_id?: string | null
           total_amount?: number | null
         }
         Update: {
@@ -202,6 +258,8 @@ export type Database = {
           notes?: string | null
           order_date?: string
           payment_mode?: Database["public"]["Enums"]["payment_mode"]
+          pending_effective_date?: string | null
+          pending_total_amount?: number | null
           promo_code?: string | null
           quantity?: number
           shipping_address_line1?: string | null
@@ -213,6 +271,8 @@ export type Database = {
           status?: Database["public"]["Enums"]["order_status"]
           stripe_payment_intent_id?: string | null
           stripe_session_id?: string | null
+          stripe_subscription_id?: string | null
+          stripe_subscription_schedule_id?: string | null
           total_amount?: number | null
         }
         Relationships: [
@@ -268,7 +328,9 @@ export type Database = {
           company_address: string
           company_name: string
           company_postcode: string
+          contact_email: string
           contact_person: string
+          contact_phone: string
           id: string
           logo_url: string
           status: string

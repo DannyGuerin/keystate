@@ -1,22 +1,22 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { getPricingTier, formatPrice } from "@/config/pricing";
+import { getVolumePricing, formatPrice } from "@/config/pricing";
 
-interface OrderSummaryProps {
-  formData: {
-    keyringType: string;
-    color: string;
-    quantity: number;
-    paymentMode: "one-off" | "subscription";
-  };
+interface OrderSummaryItem {
+  label: string;
+  description?: string;
+  quantity: number;
 }
 
-export const OrderSummary = ({ formData }: OrderSummaryProps) => {
-  // Get pricing information
-  const pricingTier = formData.quantity
-    ? getPricingTier(formData.quantity, formData.paymentMode)
-    : null;
+interface OrderSummaryProps {
+  items: OrderSummaryItem[];
+  paymentMode: "one-off" | "subscription";
+}
+
+export const OrderSummary = ({ items, paymentMode }: OrderSummaryProps) => {
+  const totalQuantity = items.reduce((sum, item) => sum + item.quantity, 0);
+  const pricing = getVolumePricing(totalQuantity, paymentMode);
 
   return (
     <Card className="sticky top-24 shadow-elegant rounded-2xl border-border">
@@ -25,32 +25,34 @@ export const OrderSummary = ({ formData }: OrderSummaryProps) => {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-3">
-          <div className="flex justify-between items-start">
-            <span className="text-sm text-muted-foreground">Keyring Type</span>
-            <span className="text-sm font-medium text-right max-w-[150px] leading-tight">
-              {formData.keyringType || "—"}
-            </span>
-          </div>
+          {items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No keyrings selected yet</p>
+          ) : (
+            items.map((item, index) => (
+              <div key={`${item.label}-${index}`} className="flex justify-between items-start">
+                <span className="text-sm text-muted-foreground text-right max-w-[150px] leading-tight">
+                  {item.label}
+                  {item.description && ` — ${item.description}`}
+                </span>
+                <span className="text-sm font-medium whitespace-nowrap">
+                  {item.quantity} units
+                </span>
+              </div>
+            ))
+          )}
 
-          <div className="flex justify-between items-start">
-            <span className="text-sm text-muted-foreground">Colour</span>
-            <span className="text-sm font-medium">
-              {formData.color || "—"}
-            </span>
-          </div>
+          {items.length > 0 && (
+            <div className="flex justify-between items-start pt-1 border-t border-border/50">
+              <span className="text-sm font-medium">Total Quantity</span>
+              <span className="text-sm font-medium">{totalQuantity} units</span>
+            </div>
+          )}
 
-          <div className="flex justify-between items-start">
-            <span className="text-sm text-muted-foreground">Quantity</span>
-            <span className="text-sm font-medium">
-              {formData.quantity ? `${formData.quantity} units` : "—"}
-            </span>
-          </div>
-
-          {pricingTier && (
+          {pricing && (
             <div className="flex justify-between items-start">
               <span className="text-sm text-muted-foreground">Unit Price</span>
               <span className="text-sm font-medium">
-                {formatPrice(pricingTier.unitPrice)}
+                {formatPrice(pricing.unitPrice)}
               </span>
             </div>
           )}
@@ -60,16 +62,16 @@ export const OrderSummary = ({ formData }: OrderSummaryProps) => {
 
         <div className="flex justify-between items-center">
           <span className="text-sm text-muted-foreground">Payment</span>
-          <Badge variant={formData.paymentMode === "subscription" ? "default" : "secondary"}>
-            {formData.paymentMode === "subscription" ? "Monthly Subscription" : "One-Time"}
+          <Badge variant={paymentMode === "subscription" ? "default" : "secondary"}>
+            {paymentMode === "subscription" ? "Monthly Subscription" : "One-Time"}
           </Badge>
         </div>
 
-        {pricingTier && pricingTier.discount && pricingTier.discount > 0 && (
+        {pricing && pricing.discount > 0 && (
           <div className="bg-green-50 dark:bg-green-950 rounded-lg p-3 border border-green-200 dark:border-green-800">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                💰 You're saving {pricingTier.discount}%
+                💰 You're saving {pricing.discount}%
               </span>
             </div>
           </div>
@@ -80,13 +82,13 @@ export const OrderSummary = ({ formData }: OrderSummaryProps) => {
         <div className="bg-muted/30 rounded-xl p-4 space-y-2">
           <div className="flex justify-between items-baseline">
             <span className="text-sm font-medium">
-              {formData.paymentMode === "subscription" ? "Monthly Total" : "Total"}
+              {paymentMode === "subscription" ? "Monthly Total" : "Total"}
             </span>
             <span className="text-2xl font-heading font-bold">
-              {pricingTier ? formatPrice(pricingTier.total) : "—"}
+              {pricing ? formatPrice(pricing.total) : "—"}
             </span>
           </div>
-          {formData.paymentMode === "subscription" && (
+          {paymentMode === "subscription" && (
             <p className="text-xs text-muted-foreground">
               Billed monthly. Cancel anytime.
             </p>

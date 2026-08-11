@@ -28,7 +28,10 @@ interface Order {
   last_shipped_date: string | null;
   invoice_url: string | null;
   campaigns: { company_name: string };
-  keyring_variants: { type: string; color: string } | null;
+  order_items: {
+    quantity: number;
+    keyring_variants: { type: string; color: string } | null;
+  }[];
 }
 
 // Returns a YYYY-MM-DD string exactly one month after the input date string
@@ -71,7 +74,7 @@ const AdminFulfillment = () => {
         last_shipped_date,
         invoice_url,
         campaigns (company_name),
-        keyring_variants (type, color)
+        order_items (quantity, keyring_variants (type, color))
       `)
       .eq("status", "paid")
       .order("next_due_date", { ascending: true, nullsFirst: false })
@@ -212,10 +215,17 @@ const AdminFulfillment = () => {
                       <TableCell className="font-medium">{order.campaigns?.company_name}</TableCell>
                       <TableCell>{order.customer_name}</TableCell>
                       <TableCell>
-                        {order.keyring_variants ? (
-                          <div>
-                            <p className="text-sm">{order.keyring_variants.type}</p>
-                            <p className="text-xs text-muted-foreground">{order.keyring_variants.color}</p>
+                        {order.order_items && order.order_items.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.order_items.map((item, index) => (
+                              <div key={index}>
+                                <p className="text-sm">
+                                  {item.keyring_variants?.type || "—"}
+                                  <span className="text-xs text-muted-foreground"> × {item.quantity}</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">{item.keyring_variants?.color}</p>
+                              </div>
+                            ))}
                           </div>
                         ) : "—"}
                       </TableCell>

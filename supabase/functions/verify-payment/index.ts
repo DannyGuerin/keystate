@@ -98,6 +98,14 @@ serve(async (req: Request) => {
           type,
           color
         ),
+        order_items (
+          quantity,
+          unit_price,
+          keyring_variants (
+            type,
+            color
+          )
+        ),
         campaigns (
           company_name
         )

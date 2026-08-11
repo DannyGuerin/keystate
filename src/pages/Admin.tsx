@@ -22,10 +22,10 @@ interface Order {
   campaigns: {
     company_name: string;
   };
-  keyring_variants: {
-    type: string;
-    color: string;
-  } | null;
+  order_items: {
+    quantity: number;
+    keyring_variants: { type: string; color: string } | null;
+  }[];
 }
 
 const Admin = () => {
@@ -50,7 +50,7 @@ const Admin = () => {
       .select(`
         *,
         campaigns (company_name),
-        keyring_variants (type, color)
+        order_items (quantity, keyring_variants (type, color))
       `)
       .order("order_date", { ascending: false })
       .limit(10);
@@ -171,10 +171,17 @@ const Admin = () => {
                       </TableCell>
                       <TableCell>{order.campaigns?.company_name}</TableCell>
                       <TableCell>
-                        {order.keyring_variants ? (
-                          <div>
-                            <p className="text-sm">{order.keyring_variants.type}</p>
-                            <p className="text-xs text-muted-foreground">{order.keyring_variants.color}</p>
+                        {order.order_items && order.order_items.length > 0 ? (
+                          <div className="space-y-1">
+                            {order.order_items.map((item, index) => (
+                              <div key={index}>
+                                <p className="text-sm">
+                                  {item.keyring_variants?.type || "—"}
+                                  <span className="text-xs text-muted-foreground"> × {item.quantity}</span>
+                                </p>
+                                <p className="text-xs text-muted-foreground">{item.keyring_variants?.color}</p>
+                              </div>
+                            ))}
                           </div>
                         ) : (
                           "-"

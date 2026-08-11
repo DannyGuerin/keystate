@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,12 +17,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import keystateLogoImage from "@/assets/keystate-logo.png";
-import { PRICING_CONFIG, getPricingTier, formatPrice } from "@/config/pricing";
+import { getVolumePricing, formatPrice } from "@/config/pricing";
 
 type FulfillmentStatus = "pending" | "shipped" | "done";
+
+interface PortalOrderItem {
+  id: string;
+  quantity: number;
+  pending_quantity: number | null;
+  keyring_variants: { type: string; color: string } | null;
+}
 
 interface PortalOrder {
   id: string;
@@ -41,8 +47,10 @@ interface PortalOrder {
   next_due_date: string | null;
   last_shipped_date: string | null;
   invoice_url: string | null;
+  pending_total_amount: number | null;
+  pending_effective_date: string | null;
   campaigns: { company_name: string; logo_url: string | null } | null;
-  keyring_variants: { type: string; color: string } | null;
+  order_items: PortalOrderItem[];
 }
 
 const formatDate = (dateStr: string): string =>
@@ -82,7 +90,7 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
   const [savingDetails, setSavingDetails] = useState(false);
 
   const [quantityOpen, setQuantityOpen] = useState(false);
-  const [newQuantity, setNewQuantity] = useState(order.quantity);
+  const [editedQuantities, setEditedQuantities] = useState<Record<string, number>>({});
   const [savingQuantity, setSavingQuantity] = useState(false);
 
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -122,21 +130,62 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
     setSavingDetails(false);
   };
 
-  const handleUpdateQuantity = async () => {
-    const tier = getPricingTier(newQuantity, "subscription");
-    if (!tier) return;
-    setSavingQuantity(true);
-    const { error } = await supabase
-      .from("orders")
-      .update({ quantity: newQuantity, total_amount: tier.total })
-      .eq("id", order.id);
+  const openQuantityPanel = () => {
+    setEditedQuantities(
+      Object.fromEntries(order.order_items.map((oi) => [oi.id, oi.pending_quantity ?? oi.quantity]))
+    );
+    setQuantityOpen(true);
+  };
 
-    if (error) {
-      toast({ title: "Error", description: "Failed to update subscription", variant: "destructive" });
+  const setItemQuantity = (orderItemId: string, quantity: number) => {
+    const safeQuantity = Number.isInteger(quantity) && quantity >= 1 ? quantity : 1;
+    setEditedQuantities((prev) => ({ ...prev, [orderItemId]: safeQuantity }));
+  };
+
+  const editedTotalQuantity = order.order_items.reduce(
+    (sum, oi) => sum + (editedQuantities[oi.id] ?? oi.quantity),
+    0
+  );
+  const previewPricing = getVolumePricing(editedTotalQuantity, "subscription");
+  const currentTotalQuantity = order.order_items.reduce(
+    (sum, oi) => sum + (oi.pending_quantity ?? oi.quantity),
+    0
+  );
+  const hasQuantityChanges = order.order_items.some(
+    (oi) => (editedQuantities[oi.id] ?? oi.quantity) !== (oi.pending_quantity ?? oi.quantity)
+  );
+
+  const handleScheduleQuantityChange = async () => {
+    setSavingQuantity(true);
+    const { data, error } = await supabase.functions.invoke("update-subscription-quantities", {
+      body: {
+        orderId: order.id,
+        items: order.order_items.map((oi) => ({
+          orderItemId: oi.id,
+          quantity: editedQuantities[oi.id] ?? oi.quantity,
+        })),
+      },
+    });
+
+    const responseError = (data && typeof data === "object" && "error" in data && (data as any).error) || error?.message;
+
+    if (responseError) {
+      toast({ title: "Error", description: responseError, variant: "destructive" });
     } else {
-      onOrderUpdate({ id: order.id, quantity: newQuantity, total_amount: tier.total });
+      onOrderUpdate({
+        id: order.id,
+        pending_total_amount: data.pendingTotalAmount,
+        pending_effective_date: data.effectiveDate,
+        order_items: order.order_items.map((oi) => ({
+          ...oi,
+          pending_quantity: data.pendingQuantities[oi.id] ?? oi.pending_quantity,
+        })),
+      });
       setQuantityOpen(false);
-      toast({ title: "Updated", description: `Subscription updated to ${newQuantity} units/month` });
+      toast({
+        title: "Change scheduled",
+        description: `Your new quantities take effect ${formatDate(data.effectiveDate)}. You'll keep paying the current rate until then.`,
+      });
     }
     setSavingQuantity(false);
   };
@@ -158,8 +207,6 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
     setCancelling(false);
     setCancelDialogOpen(false);
   };
-
-  const selectedTier = getPricingTier(newQuantity, "subscription");
 
   return (
     <Card className="border-border/50">
@@ -189,12 +236,24 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
         {/* Order summary grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm py-4 border-y border-border/50">
           <div>
-            <p className="text-muted-foreground text-xs mb-1">Keyring</p>
-            {order.keyring_variants ? (
-              <>
-                <p className="font-medium">{order.keyring_variants.type}</p>
-                <p className="text-muted-foreground text-xs">{order.keyring_variants.color}</p>
-              </>
+            <p className="text-muted-foreground text-xs mb-1">Keyring{order.order_items.length > 1 ? "s" : ""}</p>
+            {order.order_items.length > 0 ? (
+              <div className="space-y-1.5">
+                {order.order_items.map((item) => (
+                  <div key={item.id}>
+                    <p className="font-medium">
+                      {item.keyring_variants?.type || "—"}
+                      <span className="text-muted-foreground text-xs">
+                        {" "}× {item.quantity}
+                        {item.pending_quantity !== null && item.pending_quantity !== item.quantity && (
+                          <span className="text-primary"> → {item.pending_quantity}</span>
+                        )}
+                      </span>
+                    </p>
+                    <p className="text-muted-foreground text-xs">{item.keyring_variants?.color}</p>
+                  </div>
+                ))}
+              </div>
             ) : <p>—</p>}
           </div>
           <div>
@@ -207,6 +266,9 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
               {order.total_amount ? `£${order.total_amount.toFixed(2)}` : "—"}
               {isSubscription ? "/mo" : ""}
             </p>
+            {order.pending_total_amount !== null && (
+              <p className="text-xs text-primary">→ £{order.pending_total_amount.toFixed(2)}/mo</p>
+            )}
           </div>
           <div>
             <p className="text-muted-foreground text-xs mb-1">Fulfillment</p>
@@ -237,6 +299,19 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
                 <p className="font-medium">{formatDate(order.last_shipped_date)}</p>
               </div>
             )}
+          </div>
+        )}
+
+        {/* Pending quantity change confirmation */}
+        {isSubscription && order.pending_effective_date && order.pending_total_amount !== null && (
+          <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 text-sm space-y-1">
+            <p className="font-medium text-foreground">
+              Your new quantities take effect {formatDate(order.pending_effective_date)}
+            </p>
+            <p className="text-muted-foreground">
+              You'll keep paying £{order.total_amount?.toFixed(2)}/mo until then. From {formatDate(order.pending_effective_date)},
+              you'll be billed £{order.pending_total_amount.toFixed(2)}/mo.
+            </p>
           </div>
         )}
 
@@ -278,39 +353,80 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
             <button
               type="button"
               className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium hover:bg-muted/30 transition-colors text-left"
-              onClick={() => setQuantityOpen(v => !v)}
+              onClick={() => (quantityOpen ? setQuantityOpen(false) : openQuantityPanel())}
             >
               <span>Change Quantity</span>
               {quantityOpen ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </button>
             {quantityOpen && (
-              <div className="px-4 pt-3 pb-4 space-y-3 border-t border-border/50">
-                <Select value={String(newQuantity)} onValueChange={val => setNewQuantity(Number(val))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRICING_CONFIG.subscription.map(tier => (
-                      <SelectItem key={tier.quantity} value={String(tier.quantity)}>
-                        {tier.quantity} units/mo — {formatPrice(tier.total)}/mo
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {selectedTier && (
+              <div className="px-4 pt-3 pb-4 space-y-4 border-t border-border/50">
+                <p className="text-xs text-muted-foreground">
+                  Changes here take effect at the start of your next billing cycle — you won't be charged
+                  or prorated mid-cycle.
+                </p>
+
+                <div className="space-y-2">
+                  {order.order_items.map((item) => {
+                    const qty = editedQuantities[item.id] ?? item.quantity;
+                    return (
+                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 px-3 py-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">{item.keyring_variants?.type || "Keyring"}</p>
+                          <p className="text-xs text-muted-foreground truncate">{item.keyring_variants?.color}</p>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            disabled={qty <= 1}
+                            onClick={() => setItemQuantity(item.id, qty - 1)}
+                          >
+                            <Minus className="h-3 w-3" />
+                          </Button>
+                          <Input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={qty}
+                            onChange={(e) => setItemQuantity(item.id, parseInt(e.target.value, 10))}
+                            className="w-14 h-7 text-center px-1"
+                            aria-label={`Quantity for ${item.keyring_variants?.type ?? "keyring"}`}
+                          />
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="outline"
+                            className="h-7 w-7"
+                            onClick={() => setItemQuantity(item.id, qty + 1)}
+                          >
+                            <Plus className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {previewPricing && (
                   <p className="text-sm text-muted-foreground">
                     New monthly total:{" "}
-                    <span className="font-medium text-foreground">{formatPrice(selectedTier.total)}</span>
-                    {" "}({formatPrice(selectedTier.unitPrice)} per keyring)
+                    <span className="font-medium text-foreground">{formatPrice(previewPricing.total)}</span>
+                    {" "}({formatPrice(previewPricing.unitPrice)} per keyring, {editedTotalQuantity} units total)
+                    {editedTotalQuantity !== currentTotalQuantity && (
+                      <span className="text-muted-foreground"> — currently {currentTotalQuantity} units</span>
+                    )}
                   </p>
                 )}
+
                 <Button
-                  onClick={handleUpdateQuantity}
-                  disabled={savingQuantity || newQuantity === order.quantity}
+                  onClick={handleScheduleQuantityChange}
+                  disabled={savingQuantity || !hasQuantityChanges}
                   size="sm"
                 >
                   {savingQuantity && <Loader2 className="h-3 w-3 mr-2 animate-spin" />}
-                  Update Subscription
+                  Schedule Change for Next Cycle
                 </Button>
               </div>
             )}
@@ -411,8 +527,10 @@ const Portal = () => {
         next_due_date,
         last_shipped_date,
         invoice_url,
+        pending_total_amount,
+        pending_effective_date,
         campaigns (company_name, logo_url),
-        keyring_variants (type, color)
+        order_items (id, quantity, pending_quantity, keyring_variants (type, color))
       `)
       .eq("status", "paid")
       .order("order_date", { ascending: false });

@@ -103,7 +103,6 @@ serve(async (req) => {
     // VALIDATION & BUILD: Validate each item
     const variantIds: string[] = [];
     const quantities: number[] = [];
-    const allowedQuantities = [10, 25, 50, 100, 250];
 
     for (const item of payload.items) {
       // Check variantId exists
@@ -122,13 +121,13 @@ serve(async (req) => {
         );
       }
 
-      // Validate quantity is one of the allowed tiers
+      // Validate quantity is a positive integer
       const rawQuantity = item.quantity;
-      if (!allowedQuantities.includes(rawQuantity)) {
+      if (!Number.isInteger(rawQuantity) || rawQuantity < 1) {
         logStep("Invalid quantity - returning 400", { variantId: item.variantId, quantity: rawQuantity });
         return new Response(
           JSON.stringify({
-            error: `Quantity must be one of ${allowedQuantities.join(', ')}. Got: ${rawQuantity}`
+            error: `Quantity must be a positive whole number. Got: ${rawQuantity}`
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
         );
@@ -203,6 +202,27 @@ serve(async (req) => {
 
     logStep("Order created", { orderId: order.id, totalQuantity });
 
+    // Persist the full per-variant breakdown (orders.keyring_variant_id/quantity above
+    // remain a single-item aggregate for backward compatibility)
+    const { error: orderItemsError } = await supabaseClient
+      .from("order_items")
+      .insert(
+        payload.items.map((item) => ({
+          order_id: order.id,
+          keyring_variant_id: item.variantId,
+          quantity: item.quantity,
+          unit_price: item.unitPrice,
+        }))
+      );
+
+    if (orderItemsError) {
+      logStep("Order items creation error", orderItemsError);
+      return new Response(
+        JSON.stringify({ error: "Failed to save order items" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 }
+      );
+    }
+
     // CALL STRIPE REST API
     const siteUrl = Deno.env.get("SITE_URL") || Deno.env.get("VITE_PUBLIC_SITE_URL") || req.headers.get("origin");
     
@@ -224,6 +244,9 @@ serve(async (req) => {
       params.set(`line_items[${i}][price_data][currency]`, "gbp");
       params.set(`line_items[${i}][price_data][unit_amount]`, String(Math.round(item.unitPrice * item.quantity * 100)));
       params.set(`line_items[${i}][price_data][product_data][name]`, `Keyring Order - ${item.quantity} units`);
+      // Tags the auto-created Product with the variant id so the webhook can map
+      // the resulting subscription item back to its order_items row later.
+      params.set(`line_items[${i}][price_data][product_data][metadata][keyring_variant_id]`, item.variantId);
       params.set(`line_items[${i}][quantity]`, "1");
       if (mode === "subscription") {
         params.set(`line_items[${i}][price_data][recurring][interval]`, "month");

@@ -19,10 +19,14 @@ interface Order {
   shipping_city?: string;
   shipping_postal_code?: string;
   shipping_country?: string;
-  keyring_variants?: {
-    type: string;
-    color: string;
-  };
+  order_items?: {
+    quantity: number;
+    unit_price: number;
+    keyring_variants?: {
+      type: string;
+      color: string;
+    } | null;
+  }[];
   campaigns?: {
     company_name: string;
   };
@@ -110,6 +114,26 @@ const ThankYou = () => {
               <span className="font-heading font-semibold">{orderNumber}</span>
             </div>
           </div>
+
+          {order?.order_items && order.order_items.length > 0 && (
+            <Card className="shadow-elegant rounded-2xl border-border/50 bg-card animate-scale-in mb-6">
+              <CardContent className="pt-6">
+                <h3 className="font-semibold mb-3">Your Order</h3>
+                <div className="divide-y divide-border/50">
+                  {order.order_items.map((item, index) => (
+                    <div key={index} className="flex items-center justify-between py-2 text-sm">
+                      <span className="text-muted-foreground">
+                        {item.keyring_variants
+                          ? `${item.keyring_variants.type} — ${item.keyring_variants.color}`
+                          : "Keyring"}
+                      </span>
+                      <span className="font-medium">{item.quantity} units</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {order?.shipping_name && (
             <Card className="shadow-elegant rounded-2xl border-border/50 bg-card animate-scale-in mb-6">
