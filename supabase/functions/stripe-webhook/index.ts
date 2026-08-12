@@ -4,7 +4,8 @@
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
+import { getVolumePricing } from "../_shared/pricing.ts";
 
 const addOneMonth = (dateStr: string): string => {
   const date = new Date(dateStr + "T00:00:00");
@@ -165,7 +166,16 @@ serve(async (req) => {
         console.log(`ℹ️ Skipping invoice.payment_succeeded (billing_reason: ${invoice.billing_reason})`);
       } else {
         const customerEmail = invoice.customer_email;
-        const invoiceSubscriptionId = typeof invoice.subscription === "string" ? invoice.subscription : null;
+        // As of newer Stripe API versions, invoices reference their subscription via
+        // parent.subscription_details.subscription rather than a top-level `subscription`
+        // field. Check both so this keeps working regardless of which shape is delivered.
+        const invoiceParent = (invoice as unknown as { parent?: { subscription_details?: { subscription?: string | { id: string } } } }).parent;
+        const nestedSubscription = invoiceParent?.subscription_details?.subscription;
+        const invoiceSubscriptionId =
+          typeof invoice.subscription === "string" ? invoice.subscription :
+          typeof nestedSubscription === "string" ? nestedSubscription :
+          typeof nestedSubscription === "object" && nestedSubscription ? nestedSubscription.id :
+          null;
         console.log(`🔄 Processing subscription renewal for ${customerEmail} (subscription ${invoiceSubscriptionId})`);
 
         const supabaseClient = createClient(
@@ -231,14 +241,24 @@ serve(async (req) => {
             } else if (pendingItems) {
               let newTotalQuantity = 0;
               for (const item of pendingItems) {
+                newTotalQuantity += item.pending_quantity ?? item.quantity;
+              }
+
+              // The blended per-unit rate depends on the combined quantity across every item
+              // on the order, so it must be recalculated here rather than left at whatever it
+              // was before — a quantity change can cross a volume-discount tier boundary.
+              const newPricing = getVolumePricing(newTotalQuantity, "subscription");
+
+              for (const item of pendingItems) {
                 const confirmedQuantity = item.pending_quantity ?? item.quantity;
-                newTotalQuantity += confirmedQuantity;
-                if (item.pending_quantity !== null) {
-                  await supabaseClient
-                    .from("order_items")
-                    .update({ quantity: item.pending_quantity, pending_quantity: null })
-                    .eq("id", item.id);
-                }
+                await supabaseClient
+                  .from("order_items")
+                  .update({
+                    quantity: confirmedQuantity,
+                    pending_quantity: null,
+                    ...(newPricing ? { unit_price: newPricing.unitPrice } : {}),
+                  })
+                  .eq("id", item.id);
               }
               // Billing-critical: don't trust our own pending_total_amount for the confirmed
               // total — re-derive what Stripe actually charged on this invoice and use that.

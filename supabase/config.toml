@@ -1,5 +1,12 @@
 project_id = "hwrnzyekyiawxxzecbxn"
 
+# Local dev only: this project has always run against the hosted project, so local
+# auth redirects were never configured and defaulted to the CLI scaffold's
+# 127.0.0.1:3000. The app's actual local dev server runs on port 8080 (vite.config.ts).
+[auth]
+site_url = "http://localhost:8080"
+additional_redirect_urls = ["http://localhost:8080/**", "http://127.0.0.1:8080/**"]
+
 [functions.create-checkout]
 verify_jwt = false
 
