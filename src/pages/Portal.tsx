@@ -21,6 +21,9 @@ import { Loader2, ChevronDown, ChevronUp, Minus, Plus } from "lucide-react";
 import type { Session } from "@supabase/supabase-js";
 import keystateLogoImage from "@/assets/keystate-logo.png";
 import { getVolumePricing, formatPrice } from "@/config/pricing";
+import { QuantityPresetPicker } from "@/components/QuantityPresetPicker";
+
+const MIN_QUANTITY = 10;
 
 type FulfillmentStatus = "pending" | "shipped" | "done";
 
@@ -138,7 +141,7 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
   };
 
   const setItemQuantity = (orderItemId: string, quantity: number) => {
-    const safeQuantity = Number.isInteger(quantity) && quantity >= 1 ? quantity : 1;
+    const safeQuantity = Number.isInteger(quantity) && quantity >= MIN_QUANTITY ? quantity : MIN_QUANTITY;
     setEditedQuantities((prev) => ({ ...prev, [orderItemId]: safeQuantity }));
   };
 
@@ -365,44 +368,54 @@ const OrderCard = ({ order, onOrderUpdate }: OrderCardProps) => {
                   or prorated mid-cycle.
                 </p>
 
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {order.order_items.map((item) => {
                     const qty = editedQuantities[item.id] ?? item.quantity;
                     return (
-                      <div key={item.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 px-3 py-2">
-                        <div className="min-w-0">
+                      <div key={item.id} className="rounded-lg border border-border/50 p-3 space-y-3">
+                        <div>
                           <p className="text-sm font-medium truncate">{item.keyring_variants?.type || "Keyring"}</p>
                           <p className="text-xs text-muted-foreground truncate">{item.keyring_variants?.color}</p>
                         </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            disabled={qty <= 1}
-                            onClick={() => setItemQuantity(item.id, qty - 1)}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </Button>
-                          <Input
-                            type="number"
-                            min={1}
-                            step={1}
-                            value={qty}
-                            onChange={(e) => setItemQuantity(item.id, parseInt(e.target.value, 10))}
-                            className="w-14 h-7 text-center px-1"
-                            aria-label={`Quantity for ${item.keyring_variants?.type ?? "keyring"}`}
-                          />
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="outline"
-                            className="h-7 w-7"
-                            onClick={() => setItemQuantity(item.id, qty + 1)}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </Button>
+
+                        <QuantityPresetPicker
+                          quantity={qty}
+                          paymentMode="subscription"
+                          onSelect={(quantity) => setItemQuantity(item.id, quantity)}
+                        />
+
+                        <div className="flex items-center justify-center gap-3">
+                          <span className="text-xs font-medium text-muted-foreground">Or set manually</span>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              disabled={qty <= MIN_QUANTITY}
+                              onClick={() => setItemQuantity(item.id, qty - 1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <Input
+                              type="number"
+                              min={MIN_QUANTITY}
+                              step={1}
+                              value={qty}
+                              onChange={(e) => setItemQuantity(item.id, parseInt(e.target.value, 10))}
+                              className="w-14 h-7 text-center px-1"
+                              aria-label={`Quantity for ${item.keyring_variants?.type ?? "keyring"}`}
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => setItemQuantity(item.id, qty + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     );

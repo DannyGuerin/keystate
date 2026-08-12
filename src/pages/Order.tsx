@@ -34,6 +34,8 @@ interface KeyringVariant {
   is_available: boolean;
 }
 
+const MIN_QUANTITY = 10;
+
 const Order = () => {
   const { code } = useParams();
   const navigate = useNavigate();
@@ -69,7 +71,7 @@ const Order = () => {
   // Auto-select when only one variant is available
   useEffect(() => {
     if (variants.length === 1 && selectedItems.length === 0) {
-      setSelectedItems([{ keyringId: variants[0].id, quantity: 1 }]);
+      setSelectedItems([{ keyringId: variants[0].id, quantity: MIN_QUANTITY }]);
       if (step === 1) setStep(2);
     }
   }, [variants, selectedItems, step]);
@@ -80,12 +82,12 @@ const Order = () => {
       if (exists) {
         return prev.filter((item) => item.keyringId !== variantId);
       }
-      return [...prev, { keyringId: variantId, quantity: 1 }];
+      return [...prev, { keyringId: variantId, quantity: MIN_QUANTITY }];
     });
   };
 
   const updateVariantQuantity = (variantId: string, quantity: number) => {
-    const safeQuantity = Number.isInteger(quantity) && quantity >= 1 ? quantity : 1;
+    const safeQuantity = Number.isInteger(quantity) && quantity >= MIN_QUANTITY ? quantity : MIN_QUANTITY;
     setSelectedItems((prev) =>
       prev.map((item) => (item.keyringId === variantId ? { ...item, quantity: safeQuantity } : item))
     );
@@ -313,7 +315,7 @@ const Order = () => {
 
         <StepProgress
           steps={["Select Keyring", "Order Details", "Contact Info"]}
-          currentStep={step - 1}
+          currentStep={step <= 1 ? 0 : step <= 3 ? 1 : 2}
         />
 
         <div className="grid lg:grid-cols-3 gap-8 mt-8">
@@ -349,7 +351,8 @@ const Order = () => {
                               description={variant.color}
                               imageUrl={variant.image_url}
                               selected={!!selectedItem}
-                              quantity={selectedItem?.quantity ?? 1}
+                              quantity={selectedItem?.quantity ?? MIN_QUANTITY}
+                              paymentMode={paymentMode}
                               onToggle={() => toggleVariant(variant.id)}
                               onQuantityChange={(quantity) => updateVariantQuantity(variant.id, quantity)}
                             />
@@ -377,242 +380,267 @@ const Order = () => {
               </Card>
             )}
 
-            {/* Step 2: Company Details & Order Details */}
+            {/* Step 2: Company Details */}
             {step >= 2 && (
-              <>
-                {/* Company Details Card */}
-                <Card className="animate-fade-in">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-heading">Company Details</CardTitle>
-                    <CardDescription>
-                      Pre-filled with the estate agent's details. Edit if needed, <strong className="text-primary font-bold">then confirm</strong>.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-end mb-2">
-                      <Badge variant="secondary" className="text-xs">
-                        {detailsEditing ? "Editing" : "Locked"}
-                      </Badge>
-                    </div>
+              <Card className="animate-fade-in">
+                <CardHeader>
+                  <CardTitle className="text-xl font-heading">Company Details</CardTitle>
+                  <CardDescription>
+                    We've filled these in with your company's details — update anything that's changed, <strong className="text-primary font-bold">then confirm</strong> to continue.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-end mb-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {detailsEditing ? "Editing" : "Locked"}
+                    </Badge>
+                  </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingName">Company Name *</Label>
+                    <Input
+                      id="shippingName"
+                      value={shippingName}
+                      onChange={(e) => setShippingName(e.target.value)}
+                      placeholder="Company Name"
+                      readOnly={!detailsEditing}
+                      className={!detailsEditing ? "bg-muted" : undefined}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor="shippingName">Company Name *</Label>
+                      <Label htmlFor="shippingAddress">Address</Label>
                       <Input
-                        id="shippingName"
-                        value={shippingName}
-                        onChange={(e) => setShippingName(e.target.value)}
-                        placeholder="Company Name"
+                        id="shippingAddress"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                        placeholder="123 Business Street"
                         readOnly={!detailsEditing}
                         className={!detailsEditing ? "bg-muted" : undefined}
                       />
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingAddress">Address</Label>
-                        <Input
-                          id="shippingAddress"
-                          value={shippingAddress}
-                          onChange={(e) => setShippingAddress(e.target.value)}
-                          placeholder="123 Business Street"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="shippingPostcode">Postcode</Label>
-                        <Input
-                          id="shippingPostcode"
-                          value={shippingPostcode}
-                          onChange={(e) => setShippingPostcode(e.target.value)}
-                          placeholder="SW1A 1AA"
-                          readOnly={!detailsEditing}
-                          className={!detailsEditing ? "bg-muted" : undefined}
-                        />
-                      </div>
-                    </div>
-
                     <div className="space-y-2">
-                      <Label htmlFor="shippingContact">Contact Person</Label>
+                      <Label htmlFor="shippingPostcode">Postcode</Label>
                       <Input
-                        id="shippingContact"
-                        value={shippingContact}
-                        onChange={(e) => setShippingContact(e.target.value)}
-                        placeholder="John Doe"
+                        id="shippingPostcode"
+                        value={shippingPostcode}
+                        onChange={(e) => setShippingPostcode(e.target.value)}
+                        placeholder="SW1A 1AA"
                         readOnly={!detailsEditing}
-                        className={!detailsEditing ? "bg-slate-50" : undefined}
+                        className={!detailsEditing ? "bg-muted" : undefined}
                       />
                     </div>
+                  </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                      {detailsEditing ? (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                              setShippingName(campaign?.company_name || "");
-                              setShippingAddress(campaign?.company_address || "");
-                              setShippingPostcode(campaign?.company_postcode || "");
-                              setShippingContact(campaign?.contact_person || "");
-                            }}
-                          >
-                            Cancel
-                          </Button>
-                          <Button
-                            type="button"
-                            className="sm:flex-1"
-                            onClick={() => {
-                              setDetailsEditing(false);
-                            }}
-                          >
-                            Save Changes
-                          </Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="sm:flex-1"
-                            onClick={() => setDetailsEditing(true)}
-                          >
-                            Edit
-                          </Button>
-                          {step >= 3 ? (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="sm:flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-50 opacity-100" // opacity-100 to override disabled opacity if we want it to look crisp
-                              disabled
-                            >
-                              <Check className="h-4 w-4 mr-2" />
-                              Confirmed
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
-                              className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
-                              onClick={() => {
-                                setStep(3);
-                                setTimeout(() => {
-                                  document.getElementById('order-details')?.scrollIntoView({ behavior: 'smooth' });
-                                }, 100);
-                              }}
-                            >
-                              Confirm Details
-                            </Button>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingContact">Contact Person</Label>
+                    <Input
+                      id="shippingContact"
+                      value={shippingContact}
+                      onChange={(e) => setShippingContact(e.target.value)}
+                      placeholder="John Doe"
+                      readOnly={!detailsEditing}
+                      className={!detailsEditing ? "bg-slate-50" : undefined}
+                    />
+                  </div>
 
-                {/* Order Details Card */}
-                <Card id="order-details" className="animate-fade-in mt-6">
-                  <CardHeader>
-                    <CardTitle className="text-xl font-heading">Order Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    {/* Payment Mode Toggle */}
-                    <div className="space-y-2">
-                      <Label>Payment Type</Label>
-                      <div className="flex flex-col sm:flex-row gap-2">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    {detailsEditing ? (
+                      <>
                         <Button
                           type="button"
-                          variant={paymentMode === "subscription" ? "default" : "outline"}
-                          className="flex-1 justify-center sm:justify-start h-auto py-3 sm:py-2"
-                          onClick={() => setPaymentMode("subscription")}
+                          variant="outline"
+                          className="sm:flex-1"
+                          onClick={() => {
+                            setDetailsEditing(false);
+                            setShippingName(campaign?.company_name || "");
+                            setShippingAddress(campaign?.company_address || "");
+                            setShippingPostcode(campaign?.company_postcode || "");
+                            setShippingContact(campaign?.contact_person || "");
+                          }}
                         >
-                          <span className="flex items-center flex-wrap gap-2 justify-center sm:justify-start">
-                            Monthly Subscription
-                            {paymentMode === "subscription" && (
-                              <Badge className="bg-white text-primary whitespace-nowrap">Recommended</Badge>
-                            )}
-                          </span>
+                          Cancel
                         </Button>
                         <Button
                           type="button"
-                          variant={paymentMode === "one-off" ? "default" : "outline"}
-                          className="flex-1 h-auto py-3 sm:py-2"
-                          onClick={() => setPaymentMode("one-off")}
+                          className="sm:flex-1"
+                          onClick={() => {
+                            setDetailsEditing(false);
+                          }}
                         >
-                          One-Off Purchase
+                          Save Changes
                         </Button>
-                      </div>
-                    </div>
-
-                    {/* Selected Keyrings & Quantities */}
-                    <div className="space-y-3">
-                      <Label>Your Keyrings</Label>
-                      {selectedVariantDetails.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                          No keyrings selected yet — go back to step 1 to choose at least one.
-                        </p>
-                      ) : (
-                        <div className="rounded-lg border divide-y">
-                          {selectedVariantDetails.map((variant) => (
-                            <div key={variant.id} className="flex items-center justify-between px-4 py-3">
-                              <div>
-                                <p className="text-sm font-medium">{variant.type}</p>
-                                <p className="text-xs text-muted-foreground">{variant.color}</p>
-                              </div>
-                              <span className="text-sm font-medium">
-                                {variant.quantity} {paymentMode === "subscription" ? "/mo" : "units"}
-                              </span>
-                            </div>
-                          ))}
-                          <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
-                            <span className="text-sm font-semibold">Total Quantity</span>
-                            <span className="text-sm font-semibold">
-                              {totalQuantity} {paymentMode === "subscription" ? "/mo" : "units"}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-
-                      {volumePricing && (
-                        <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-semibold text-base">
-                              {formatPrice(volumePricing.total)}
-                              {paymentMode === "subscription" && (
-                                <span className="text-muted-foreground font-normal">/mo</span>
-                              )}
-                            </span>
-                            {volumePricing.discount > 0 && (
-                              <Badge variant="default" className="text-xs">
-                                Save {volumePricing.discount}%
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground">
-                            {formatPrice(volumePricing.unitPrice)} per keyring · bulk pricing unlocked at {volumePricing.tierQuantity}+ units
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Promo Code (Optional) */}
-                    <div className="space-y-2">
-                      <Label htmlFor="promoCode">Promo Code (Optional)</Label>
-                      <Input
-                        id="promoCode"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        placeholder="Enter promo code"
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="sm:flex-1"
+                          onClick={() => setDetailsEditing(true)}
+                        >
+                          Edit
+                        </Button>
+                        {step >= 3 ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="sm:flex-1 bg-green-50 text-green-700 border-green-200 hover:bg-green-50 opacity-100" // opacity-100 to override disabled opacity if we want it to look crisp
+                            disabled
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            Confirmed
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            className="sm:flex-1 animate-ring-pulse shadow-md transition-all duration-300"
+                            disabled={!shippingName.trim()}
+                            onClick={() => {
+                              setStep(3);
+                              setTimeout(() => {
+                                document.getElementById('order-details')?.scrollIntoView({ behavior: 'smooth' });
+                              }, 100);
+                            }}
+                          >
+                            Confirm Details
+                          </Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
+            {/* Step 3: Order Details */}
             {step >= 3 && (
+              <Card id="order-details" className="animate-fade-in mt-6">
+                <CardHeader>
+                  <CardTitle className="text-xl font-heading">Order Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Payment Mode Toggle */}
+                  <div className="space-y-2">
+                    <Label>Payment Type</Label>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        type="button"
+                        variant={paymentMode === "subscription" ? "default" : "outline"}
+                        className="flex-1 justify-center sm:justify-start h-auto py-3 sm:py-2"
+                        onClick={() => setPaymentMode("subscription")}
+                      >
+                        <span className="flex items-center flex-wrap gap-2 justify-center sm:justify-start">
+                          Monthly Subscription
+                          {paymentMode === "subscription" && (
+                            <Badge className="bg-white text-primary whitespace-nowrap">Recommended</Badge>
+                          )}
+                        </span>
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentMode === "one-off" ? "default" : "outline"}
+                        className="flex-1 h-auto py-3 sm:py-2"
+                        onClick={() => setPaymentMode("one-off")}
+                      >
+                        One-Off Purchase
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Selected Keyrings & Quantities */}
+                  <div className="space-y-3">
+                    <Label>Your Keyrings</Label>
+                    {selectedVariantDetails.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">
+                        No keyrings selected yet — head back and pick at least one to continue.
+                      </p>
+                    ) : (
+                      <div className="rounded-lg border divide-y">
+                        {selectedVariantDetails.map((variant) => (
+                          <div key={variant.id} className="flex items-center justify-between px-4 py-3">
+                            <div>
+                              <p className="text-sm font-medium">{variant.type}</p>
+                              <p className="text-xs text-muted-foreground">{variant.color}</p>
+                            </div>
+                            <span className="text-sm font-medium">
+                              {variant.quantity} {paymentMode === "subscription" ? "/mo" : "units"}
+                            </span>
+                          </div>
+                        ))}
+                        <div className="flex items-center justify-between px-4 py-3 bg-muted/30">
+                          <span className="text-sm font-semibold">Total Quantity</span>
+                          <span className="text-sm font-semibold">
+                            {totalQuantity} {paymentMode === "subscription" ? "/mo" : "units"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {volumePricing && (
+                      <div className="rounded-lg border-2 border-primary/40 bg-primary/5 p-4 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-base">
+                            {formatPrice(volumePricing.total)}
+                            {paymentMode === "subscription" && (
+                              <span className="text-muted-foreground font-normal">/mo</span>
+                            )}
+                          </span>
+                          {volumePricing.discount > 0 && (
+                            <Badge variant="default" className="text-xs">
+                              Save {volumePricing.discount}%
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {formatPrice(volumePricing.unitPrice)} per keyring · bulk pricing unlocked at {volumePricing.tierQuantity}+ units
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Promo Code (Optional) */}
+                  <div className="space-y-2">
+                    <Label htmlFor="promoCode">Promo Code (Optional)</Label>
+                    <Input
+                      id="promoCode"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value)}
+                      placeholder="Enter promo code"
+                    />
+                  </div>
+
+                  {step >= 4 ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full bg-green-50 text-green-700 border-green-200 hover:bg-green-50 opacity-100"
+                      disabled
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirmed
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      className="w-full animate-ring-pulse shadow-md transition-all duration-300"
+                      onClick={() => {
+                        setStep(4);
+                        setTimeout(() => {
+                          document.getElementById('contact-info')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}
+                    >
+                      Continue to Your Details
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {step >= 4 && (
               <Card id="contact-info" className="animate-fade-in">
                 <CardContent className="pt-6 space-y-6">
                   <h3 className="text-lg font-heading font-semibold">Your Details</h3>

@@ -2,6 +2,9 @@ import { cn } from "@/lib/utils";
 import { Check, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { QuantityPresetPicker } from "@/components/QuantityPresetPicker";
+
+const MIN_QUANTITY = 10;
 
 interface KeyringTypeCardProps {
   id: string;
@@ -10,6 +13,7 @@ interface KeyringTypeCardProps {
   imageUrl?: string | null;
   selected: boolean;
   quantity: number;
+  paymentMode: "one-off" | "subscription";
   onToggle: () => void;
   onQuantityChange: (quantity: number) => void;
 }
@@ -21,6 +25,7 @@ export const KeyringTypeCard = ({
   imageUrl,
   selected,
   quantity,
+  paymentMode,
   onToggle,
   onQuantityChange,
 }: KeyringTypeCardProps) => {
@@ -75,40 +80,48 @@ export const KeyringTypeCard = ({
       </button>
 
       {selected && (
-        <div className="flex items-center justify-center gap-3 px-4 pb-4 pt-3 border-t border-border/60">
-          <span className="text-xs font-medium text-muted-foreground">Qty</span>
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              className="h-7 w-7"
-              disabled={quantity <= 1}
-              onClick={() => onQuantityChange(quantity - 1)}
-            >
-              <Minus className="h-3 w-3" />
-            </Button>
-            <Input
-              type="number"
-              min={1}
-              step={1}
-              value={quantity}
-              onChange={(e) => {
-                const parsed = parseInt(e.target.value, 10);
-                onQuantityChange(Number.isFinite(parsed) ? parsed : 1);
-              }}
-              className="w-14 h-7 text-center px-1"
-              aria-label={`Quantity for ${label}`}
-            />
-            <Button
-              type="button"
-              size="icon"
-              variant="outline"
-              className="h-7 w-7"
-              onClick={() => onQuantityChange(quantity + 1)}
-            >
-              <Plus className="h-3 w-3" />
-            </Button>
+        <div className="px-4 pb-4 pt-3 border-t border-border/60 space-y-3">
+          <QuantityPresetPicker
+            quantity={quantity}
+            paymentMode={paymentMode}
+            onSelect={onQuantityChange}
+          />
+
+          <div className="flex items-center justify-center gap-3">
+            <span className="text-xs font-medium text-muted-foreground">Or set manually</span>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                disabled={quantity <= MIN_QUANTITY}
+                onClick={() => onQuantityChange(Math.max(MIN_QUANTITY, quantity - 1))}
+              >
+                <Minus className="h-3 w-3" />
+              </Button>
+              <Input
+                type="number"
+                min={MIN_QUANTITY}
+                step={1}
+                value={quantity}
+                onChange={(e) => {
+                  const parsed = parseInt(e.target.value, 10);
+                  onQuantityChange(Number.isFinite(parsed) ? Math.max(MIN_QUANTITY, parsed) : MIN_QUANTITY);
+                }}
+                className="w-14 h-7 text-center px-1"
+                aria-label={`Quantity for ${label}`}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                className="h-7 w-7"
+                onClick={() => onQuantityChange(quantity + 1)}
+              >
+                <Plus className="h-3 w-3" />
+              </Button>
+            </div>
           </div>
         </div>
       )}

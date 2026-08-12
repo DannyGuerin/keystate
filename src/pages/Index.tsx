@@ -239,6 +239,7 @@ const Index = () => {
                           description={type.description}
                           selected={formData.keyringType === type.id}
                           quantity={formData.quantity}
+                          paymentMode={formData.paymentMode}
                           onToggle={() =>
                             setFormData({ ...formData, keyringType: type.id })
                           }
