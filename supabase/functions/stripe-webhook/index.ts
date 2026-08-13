@@ -1,11 +1,24 @@
 // Handled Stripe events (must be enabled in Stripe webhook config):
 //   - checkout.session.completed
 //   - invoice.payment_succeeded
+//   - refund.created
+//   - refund.updated
+//   - refund.failed
+//
+// Note: charge.refund.updated is deliberately NOT handled — Stripe's own docs
+// mark it deprecated in favor of refund.updated. charge.refunded is also not
+// used as the trigger: it doesn't expose the refund's own status, so relying
+// on it risks marking an order refunded before the money has actually moved
+// (e.g. a card refund held pending due to insufficient Stripe balance).
+//
+// RESEND_API_KEY is optional: if unset, the order confirmation email is
+// skipped with a warning rather than failing the order.
 
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.112.3";
 import { getVolumePricing } from "../_shared/pricing.ts";
+import { sendOrderConfirmationEmail } from "../_shared/email.ts";
 
 const addOneMonth = (dateStr: string): string => {
   const date = new Date(dateStr + "T00:00:00");
@@ -87,8 +100,18 @@ serve(async (req) => {
         } else {
           console.warn(`⚠️ Could not fetch invoice ${session.invoice}: ${invoiceRes.status}`);
         }
-      } else {
-        // TODO: for one-off payments, retrieve receipt_url by expanding payment_intent on the session
+      } else if (session.payment_intent && typeof session.payment_intent === "string") {
+        // One-off payments have no Invoice object — the receipt lives on the Charge instead.
+        const piRes = await fetch(
+          `https://api.stripe.com/v1/payment_intents/${session.payment_intent}?expand[]=latest_charge`,
+          { headers: { Authorization: `Bearer ${stripeSecretKey}` } }
+        );
+        if (piRes.ok) {
+          const piObj = await piRes.json();
+          invoiceUrl = piObj.latest_charge?.receipt_url || null;
+        } else {
+          console.warn(`⚠️ Could not fetch payment_intent ${session.payment_intent}: ${piRes.status}`);
+        }
       }
 
       // Update order in Supabase
@@ -155,6 +178,85 @@ serve(async (req) => {
         } catch (mapErr) {
           console.error(`❌ Failed to map subscription items for order ${orderId}:`, mapErr instanceof Error ? mapErr.message : String(mapErr));
         }
+      }
+
+      // Order confirmation email — a nice-to-have on top of a successful order, never a
+      // dependency of one. Any failure here (missing key, Resend error, bad data) is only
+      // logged; it must never affect the response or the order that's already been confirmed.
+      try {
+        const resendApiKey = Deno.env.get("RESEND_API_KEY");
+        if (!resendApiKey) {
+          console.warn(`⚠️ RESEND_API_KEY not set — skipping confirmation email for order ${orderId}`);
+        } else {
+          // PostgREST returns these as single objects at runtime (orders -> one campaign,
+          // each order_item -> one keyring_variant) — cast past supabase-js's untyped-client
+          // inference, which defensively types embedded resources as arrays.
+          interface FullOrderForEmail {
+            id: string;
+            customer_name: string | null;
+            customer_email: string | null;
+            total_amount: number | string | null;
+            order_items: { quantity: number; keyring_variants: { type: string; color: string } | null }[];
+            campaigns: { company_name: string } | null;
+          }
+
+          const fullOrderResult = (await supabaseClient
+            .from("orders")
+            .select(`
+              id, customer_name, customer_email, total_amount,
+              order_items ( quantity, keyring_variants ( type, color ) ),
+              campaigns ( company_name )
+            `)
+            .eq("id", orderId)
+            .single()) as unknown as { data: FullOrderForEmail | null; error: unknown };
+          const { data: fullOrder, error: fullOrderError } = fullOrderResult;
+
+          if (fullOrderError || !fullOrder) {
+            console.warn(`⚠️ Could not fetch order ${orderId} for confirmation email:`, fullOrderError);
+          } else if (!fullOrder.customer_email) {
+            console.warn(`⚠️ Order ${orderId} has no customer_email — skipping confirmation email`);
+          } else {
+            const result = await sendOrderConfirmationEmail({
+              apiKey: resendApiKey,
+              to: fullOrder.customer_email,
+              data: {
+                orderId: fullOrder.id,
+                customerName: fullOrder.customer_name ?? "",
+                companyName: fullOrder.campaigns?.company_name ?? null,
+                totalAmount: Number(fullOrder.total_amount ?? 0),
+                items: (fullOrder.order_items ?? []).map((item) => ({
+                  label: item.keyring_variants
+                    ? `${item.keyring_variants.type} — ${item.keyring_variants.color}`
+                    : "Keyring",
+                  quantity: item.quantity,
+                })),
+                // The orders table's shipping_* columns aren't populated yet at this point —
+                // that happens later, in verify-payment, when the thank-you page loads (which
+                // isn't guaranteed to happen at all). session.shipping_details is already on
+                // the Checkout Session object delivered to this webhook, no extra fetch needed,
+                // and is the real address the customer just entered on Stripe's own page.
+                shipping: session.shipping_details?.address
+                  ? {
+                      name: session.shipping_details.name ?? fullOrder.customer_name ?? "",
+                      addressLine1: session.shipping_details.address.line1 ?? "",
+                      addressLine2: session.shipping_details.address.line2,
+                      city: session.shipping_details.address.city,
+                      postalCode: session.shipping_details.address.postal_code,
+                      country: session.shipping_details.address.country,
+                    }
+                  : null,
+              },
+            });
+
+            if (!result.ok) {
+              console.warn(`⚠️ Failed to send confirmation email for order ${orderId}: ${result.status} ${result.body}`);
+            } else {
+              console.log(`✅ Confirmation email sent for order ${orderId} to ${fullOrder.customer_email}`);
+            }
+          }
+        }
+      } catch (emailErr) {
+        console.error(`❌ Error sending confirmation email for order ${orderId}:`, emailErr instanceof Error ? emailErr.message : String(emailErr));
       }
 
     // Handle invoice.payment_succeeded — subscription renewal
@@ -299,6 +401,88 @@ serve(async (req) => {
           }
         }
       }
+
+    // Handle refund.created / refund.updated — act only once the refund has actually
+    // succeeded (not just been requested), since refunds can sit pending.
+    } else if (event.type === "refund.created" || event.type === "refund.updated") {
+      const refund = event.data.object as Stripe.Refund;
+
+      if (refund.status !== "succeeded") {
+        console.log(`ℹ️ Skipping ${event.type} for refund ${refund.id} (status: ${refund.status})`);
+      } else {
+        const paymentIntentId = typeof refund.payment_intent === "string" ? refund.payment_intent : null;
+        const chargeId = typeof refund.charge === "string" ? refund.charge : null;
+
+        if (!paymentIntentId) {
+          console.warn(`⚠️ Refund ${refund.id} has no payment_intent — cannot link it to an order`);
+        } else if (!chargeId) {
+          console.warn(`⚠️ Refund ${refund.id} has no charge — cannot determine the refunded amount`);
+        } else {
+          const supabaseClient = createClient(
+            Deno.env.get("SUPABASE_URL") ?? "",
+            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+          );
+
+          const { data: order, error: orderError } = await supabaseClient
+            .from("orders")
+            .select("id, fulfillment_status")
+            .eq("stripe_payment_intent_id", paymentIntentId)
+            .maybeSingle();
+
+          if (orderError) {
+            console.error(`❌ Failed to look up order for payment_intent ${paymentIntentId}:`, orderError);
+          } else if (!order) {
+            console.warn(`⚠️ No order found for payment_intent ${paymentIntentId} (refund ${refund.id})`);
+          } else {
+            // The Refund object only carries this refund's own amount — the charge is the
+            // authoritative source for the running total refunded so far, needed to tell a
+            // full refund apart from a partial one.
+            const charge = await stripe.charges.retrieve(chargeId);
+            const amountRefunded = charge.amount_refunded / 100;
+            const originalAmount = charge.amount / 100;
+            const isFullRefund = charge.amount_refunded >= charge.amount;
+
+            const orderUpdate: Record<string, unknown> = { amount_refunded: amountRefunded };
+            if (isFullRefund) {
+              orderUpdate.status = "refunded";
+              orderUpdate.fulfillment_status = "cancelled";
+            } else {
+              // Deliberately not touching fulfillment_status here — a dollar amount alone
+              // doesn't tell us what should happen to fulfillment, so this is left flagged
+              // via status for manual review rather than guessed at.
+              orderUpdate.status = "partially_refunded";
+              console.warn(
+                `⚠️ PARTIAL REFUND on order ${order.id}: £${amountRefunded.toFixed(2)} of £${originalAmount.toFixed(2)} refunded ` +
+                `— fulfillment_status left as "${order.fulfillment_status}" for manual review`
+              );
+            }
+
+            const { error: updateError } = await supabaseClient
+              .from("orders")
+              .update(orderUpdate)
+              .eq("id", order.id);
+
+            if (updateError) {
+              console.error(`❌ Failed to update order ${order.id} for refund ${refund.id}:`, updateError);
+            } else {
+              console.log(
+                `✅ ${isFullRefund ? "Full" : "Partial"} refund processed for order ${order.id} (refund ${refund.id}) ` +
+                `— £${amountRefunded.toFixed(2)} of £${originalAmount.toFixed(2)}`
+              );
+            }
+          }
+        }
+      }
+
+    // Handle refund.failed — nothing was actually refunded, so the order is left untouched.
+    // This needs a human to arrange an alternative refund method (per Stripe's own guidance).
+    } else if (event.type === "refund.failed") {
+      const refund = event.data.object as Stripe.Refund;
+      const paymentIntentId = typeof refund.payment_intent === "string" ? refund.payment_intent : "unknown";
+      console.error(
+        `❌ REFUND FAILED: refund ${refund.id} (payment_intent ${paymentIntentId}) failed ` +
+        `— reason: ${refund.failure_reason ?? "unknown"}. Customer has NOT been refunded; needs manual follow-up.`
+      );
 
     } else {
       console.log(`ℹ️ Unhandled event type: ${event.type}`);
