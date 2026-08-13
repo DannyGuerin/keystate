@@ -25,3 +25,7 @@ dist-ssr
 .env
 supabase/.temp/
 supabase/.branches/
+
+# Manual pre-migration backups (contain real customer data — never commit)
+backup_pre_push_*.sql
+backup_pre_*.sql
